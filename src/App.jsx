@@ -167,7 +167,10 @@ export default function App() {
           justifyContent: 'space-between',
           padding: '28px 24px',
           zIndex: 10,
-          flexShrink: 0
+          flexShrink: 0,
+          position: 'sticky',
+          top: 0,
+          height: '100vh'
         }}>
           <div>
             {/* Logo Area */}
@@ -1483,46 +1486,69 @@ function DashboardModule({ windowWidth, auraColor, riskScore, setRiskScore }) {
           {ACTIVE_INDIAN_THREATS.map((threat) => (
             <div 
               key={threat.id} 
-              className={`glass-card ${threat.severity === 'CRITICAL' ? 'glass-card-danger' : 'glass-card-watch'}`} 
               onMouseMove={handleCardTilt}
               onMouseLeave={handleCardReset}
               style={{ 
-                padding: '24px', 
-                borderLeft: `4px solid ${threat.color}`,
+                background: 'linear-gradient(180deg, rgba(20,20,28,0.95) 0%, rgba(12,12,18,0.95) 100%)',
+                border: '1px solid rgba(255,255,255,0.06)',
+                borderTop: `2px solid ${threat.color}`,
+                borderRadius: '6px',
+                padding: '20px',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
-                gap: '14px'
+                position: 'relative',
+                overflow: 'hidden',
+                transition: 'transform 300ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 300ms ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = `0 12px 30px ${threat.color}20, 0 0 0 1px ${threat.color}40`;
               }}
             >
-              <div className="text-wrap-safe">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <span className="font-dm-mono" style={{ fontSize: '10px', color: 'var(--text-muted)', letterSpacing: '0.04em' }}>{threat.id}</span>
-                  <span className="font-dm-mono" style={{ 
+              {/* Subtle Tech Grid Pattern */}
+              <div style={{ 
+                position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, 
+                backgroundImage: 'linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)', 
+                backgroundSize: '16px 16px', opacity: 0.5, pointerEvents: 'none' 
+              }} />
+
+              <div style={{ position: 'relative', zIndex: 2 }}>
+                {/* Header Row */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                  <div>
+                    <div className="font-dm-mono" style={{ fontSize: '10px', color: 'var(--text-muted)', letterSpacing: '0.08em', marginBottom: '4px' }}>
+                      INTEL ID: {threat.id}
+                    </div>
+                    <h4 className="font-syne" style={{ fontSize: '17px', fontWeight: '600', color: '#fff', letterSpacing: '0.01em' }}>
+                      {threat.name}
+                    </h4>
+                  </div>
+                  <div className="font-dm-mono" style={{ 
                     fontSize: '9px', 
-                    background: `${threat.color}15`, 
+                    background: threat.severity === 'CRITICAL' ? 'rgba(255,61,90,0.1)' : 'rgba(245,197,24,0.1)', 
                     color: threat.color, 
-                    border: `1px solid ${threat.color}`, 
-                    padding: '2.5px 8px', 
-                    borderRadius: '10px', 
-                    fontWeight: '700',
-                    boxShadow: `0 0 6px ${threat.color}15`
+                    border: `1px solid ${threat.color}40`, 
+                    padding: '4px 8px', 
+                    borderRadius: '2px', 
+                    fontWeight: '700'
                   }}>
                     {threat.severity}
-                  </span>
+                  </div>
                 </div>
-                <h4 className="font-syne text-wrap-safe" style={{ fontSize: '19px', fontWeight: '700', color: '#fff' }}>
-                  {threat.name}
-                </h4>
-                <div className="font-dm-mono" style={{ fontSize: '11px', color: threat.color, marginTop: '4px', fontWeight: '500' }}>
-                  Primary Vector: {threat.vector}
+                
+                {/* Body content with professional structure */}
+                <div style={{ background: 'rgba(0,0,0,0.3)', padding: '12px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.02)' }}>
+                  <div className="font-dm-mono" style={{ fontSize: '11px', color: threat.color, marginBottom: '6px' }}>
+                    VECTOR: {threat.vector}
+                  </div>
+                  <p className="font-dm-sans" style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', lineHeight: '1.5' }}>
+                    {threat.description}
+                  </p>
                 </div>
-                <p className="font-dm-sans text-wrap-safe" style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.6', marginTop: '10px' }}>
-                  {threat.description}
-                </p>
               </div>
 
-              <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              {/* Footer */}
+              <div style={{ position: 'relative', zIndex: 2, borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: '12px', marginTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span className="font-dm-mono" style={{ fontSize: '9px', color: 'var(--text-muted)' }}>INTEGRITY SECTOR AUDITED</span>
                 <span style={{ width: '6px', height: '6px', background: 'var(--aura-safe)', borderRadius: '50%', boxShadow: '0 0 6px var(--aura-safe)' }} />
               </div>

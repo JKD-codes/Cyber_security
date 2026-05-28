@@ -170,13 +170,26 @@ export default function App() {
           flexShrink: 0,
           position: 'sticky',
           top: 0,
-          height: '100vh'
+          height: '100vh',
+          overflowY: 'auto'
         }}>
           <div>
             {/* Logo Area */}
             <div style={{ marginBottom: '36px' }}>
-              <div className="font-syne" style={{ fontSize: '28px', fontWeight: '800', letterSpacing: '-0.02em', color: '#fff' }}>
-                🛡️ CyberShield
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M16 2L3 7V14C3 21.5 8.5 28.5 16 30C23.5 28.5 29 21.5 29 14V7L16 2Z" fill="url(#shield_grad)" stroke="var(--aura-safe)" strokeWidth="1.5"/>
+                  <path d="M16 7V25C21 23.5 24.5 18 24.5 14V9.5L16 7Z" fill="var(--aura-safe)" opacity="0.3"/>
+                  <defs>
+                    <linearGradient id="shield_grad" x1="16" y1="2" x2="16" y2="30" gradientUnits="userSpaceOnUse">
+                      <stop stopColor="rgba(157, 110, 255, 0.4)"/>
+                      <stop offset="1" stopColor="rgba(0, 229, 160, 0.1)"/>
+                    </linearGradient>
+                  </defs>
+                </svg>
+                <div className="font-syne" style={{ fontSize: '26px', fontWeight: '800', letterSpacing: '-0.02em', color: '#fff' }}>
+                  CyberShield
+                </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
                 <span style={{

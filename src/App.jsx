@@ -1720,10 +1720,11 @@ function ScamDetectorModule({ windowWidth, setRiskScore }) {
         return { color: 'var(--aura-danger)', bg: 'rgba(255, 61, 90, 0.08)', border: 'var(--aura-danger)' };
     }
   };
-
+  return (
     <div className="page-transition-enter-active" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
       
       {/* Title Header */}
+      <div>
         <div className="font-dm-mono" style={{ fontSize: '11px', color: 'var(--text-secondary)', letterSpacing: '0.15em' }}>HEURISTICS DETECTION AUDIT</div>
         <h2 className="font-syne" style={{ fontSize: '42px', fontWeight: '700', letterSpacing: '-0.02em', marginTop: '6px' }}>Link & Scam Scanner</h2>
         <p className="font-dm-sans" style={{ fontSize: '15px', color: 'var(--text-secondary)', marginTop: '4px', maxWidth: '700px', lineHeight: '1.6' }}>Input links to search for lookalike homoglyphs, check connection protocols, and audit texts for scam terminology.</p>

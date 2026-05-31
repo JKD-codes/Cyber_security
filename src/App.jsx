@@ -164,16 +164,14 @@ export default function App() {
           borderRight: '1px solid var(--border)',
           display: 'flex',
           flexDirection: 'column',
-          justifyContent: 'space-between',
-          padding: '28px 24px',
           zIndex: 10,
           flexShrink: 0,
           position: 'sticky',
           top: 0,
           height: '100vh',
-          overflowY: 'auto'
+          overflow: 'hidden'
         }}>
-          <div>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '28px 24px 20px 24px', display: 'flex', flexDirection: 'column' }}>
             {/* Logo Area */}
             <div style={{ marginBottom: '36px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -246,7 +244,7 @@ export default function App() {
           </div>
 
           {/* Diagnostics Panel & Live Clock */}
-          <div>
+          <div style={{ padding: '0 24px 28px 24px', flexShrink: 0, background: 'var(--surface-0)' }}>
             <div className="glass-card" style={{ padding: '16px', background: 'var(--surface-0)', border: '1px solid var(--border)', marginBottom: '20px' }}>
               <div className="font-dm-mono" style={{ fontSize: '10px', color: 'var(--text-secondary)', letterSpacing: '0.08em', marginBottom: '8px' }}>HEURISTICS ENGINE STATUS</div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

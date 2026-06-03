@@ -8,7 +8,7 @@ const ACTIVE_INDIAN_THREATS = [
   { id: 'T-IN-6501', name: 'Utility Bill Suspensions', vector: 'Fear Induction SMS', description: 'Bulk SMS campaigns threatening immediate residential power disconnection within 30 minutes, directing victims to unofficial personal contact numbers.', severity: 'HIGH', color: 'var(--aura-watch)' }
 ];
 
-// Context alerts for Floating AI panel
+// Context alerts for Floating SOC panel
 const FLOATING_TIPS = [
   "Verify merchant names displayed on your payment app screen before entering any UPI PIN.",
   "Your UPI PIN is ONLY required to send money. Receiving money never demands your PIN.",
@@ -74,12 +74,12 @@ export default function App() {
 
   // Floating Commentary alerts
   const [floatingIndex, setFloatingIndex] = useState(0);
-  const [isAssistantExpanded, setIsAssistantExpanded] = useState(false);
+  const [isSOCExpanded, setIsSOCExpanded] = useState(false);
   const [triggerLaser, setTriggerLaser] = useState(false);
 
   // Terminal stats configuration
   const [systemSpeed, setSystemSpeed] = useState('184 GB/s');
-  const [heuristicsEngineState, setHeuristicsEngineState] = useState('ACTIVE');
+  const [securityEngineState, setSecurityEngineState] = useState('ACTIVE');
 
   // Track resizing dynamically
   useEffect(() => {
@@ -246,9 +246,9 @@ export default function App() {
           {/* Diagnostics Panel & Live Clock */}
           <div style={{ padding: '0 24px 28px 24px', flexShrink: 0, background: 'var(--surface-0)' }}>
             <div className="glass-card" style={{ padding: '16px', background: 'var(--surface-0)', border: '1px solid var(--border)', marginBottom: '20px' }}>
-              <div className="font-dm-mono" style={{ fontSize: '10px', color: 'var(--text-secondary)', letterSpacing: '0.08em', marginBottom: '8px' }}>HEURISTICS ENGINE STATUS</div>
+              <div className="font-dm-mono" style={{ fontSize: '10px', color: 'var(--text-secondary)', letterSpacing: '0.08em', marginBottom: '8px' }}>THREAT ANALYSIS ENGINE</div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span className="font-dm-mono" style={{ fontSize: '11px', color: 'var(--aura-safe)', fontWeight: '600' }}>{heuristicsEngineState}</span>
+                <span className="font-dm-mono" style={{ fontSize: '11px', color: 'var(--aura-safe)', fontWeight: '600' }}>{securityEngineState}</span>
                 <span className="font-dm-mono" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{systemSpeed}</span>
               </div>
             </div>
@@ -325,10 +325,10 @@ export default function App() {
         {renderModuleContent()}
       </main>
 
-      {/* 5. Right-Side Collapsible Cyber AI Operator Panel */}
-      <ShieldAISidebar 
-        isExpanded={isAssistantExpanded} 
-        setIsExpanded={setIsAssistantExpanded} 
+      {/* 5. Right-Side Collapsible Security Operations Center (SOC) Console */}
+      <ShieldSOCSidebar 
+        isExpanded={isSOCExpanded} 
+        setIsExpanded={setIsSOCExpanded} 
         floatingIndex={floatingIndex} 
         isMobile={isMobile} 
       />
@@ -347,10 +347,10 @@ function MatrixLoader({ message }) {
   useEffect(() => {
     const messages = [
       "Hashing input structures...",
-      "Analyzing suspicious lookalike characters...",
-      "Matching profiles against datastores...",
-      "Auditing routing server handshake logs...",
-      "Running signature heuristic matches..."
+      "Analyzing URL structure and homograph signatures...",
+      "Cross-referencing against threat intelligence databases...",
+      "Verifying SSL/TLS certificate chain integrity...",
+      "Scanning for malicious payload indicators..."
     ];
     let msgIndex = 0;
     const interval = setInterval(() => {
@@ -513,7 +513,7 @@ function ThreatGlobe({ windowWidth, auraColor }) {
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
   const [telemetryLogs, setTelemetryLogs] = useState([
-    { time: "12:40:01", text: "[SYS] Heuristics Cyber Map initialized", type: "system" },
+    { time: "12:40:01", text: "[SYS] Global Threat Map initialized", type: "system" },
     { time: "12:40:05", text: "[SHIELD] Secured local threat center socket registries", type: "shield" }
   ]);
 
@@ -974,9 +974,9 @@ function ThreatGlobe({ windowWidth, auraColor }) {
 }
 
 /* =========================================================================
-   UNIVERSAL COMPONENT: Right-Side Collapsible Cyber AI Operator Panel
+   UNIVERSAL COMPONENT: Right-Side Collapsible Security Operations Center (SOC) Console
    ========================================================================= */
-function ShieldAISidebar({ isExpanded, setIsExpanded, floatingIndex, isMobile }) {
+function ShieldSOCSidebar({ isExpanded, setIsExpanded, floatingIndex, isMobile }) {
   const [consoleOutput, setConsoleOutput] = useState([
     "Awaiting operator command directive..."
   ]);

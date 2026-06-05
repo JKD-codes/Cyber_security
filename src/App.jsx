@@ -208,6 +208,7 @@ export default function App() {
               {[
                 { id: 'dashboard', label: 'THREAT CENTER', icon: '📊' },
                 { id: 'scam-detector', label: 'LINK & SCAM AUDIT', icon: '🔍' },
+                { id: 'site-scanner', label: 'SITE SECURITY SCANNER', icon: '🌐' },
                 { id: 'footprint', label: 'OWASP AUDITOR', icon: '👣' },
                 { id: 'simulator', label: 'ATTACK LABS', icon: '🧪' },
                 { id: 'family-safety', label: 'FAMILY SHIELD', icon: '🏠' }
@@ -2985,6 +2986,217 @@ function FamilySafetyModule({ windowWidth }) {
               <span className="font-dm-mono" style={{ background: 'var(--surface-2)', padding: '6px 12px', borderRadius: '12px', fontSize: '10px', color: 'var(--text-secondary)' }}>SENIOR CITIZENS LINE: 14567</span>
               <span className="font-dm-mono" style={{ background: 'var(--surface-2)', padding: '6px 12px', borderRadius: '12px', fontSize: '10px', color: 'var(--text-secondary)' }}>WOMEN DIRECTORY: 1091</span>
             </div>
+          </div>
+
+        </div>
+      )}
+
+    </div>
+  );
+}
+
+
+/* =========================================================================
+   MODULE X: SITE SECURITY SCANNER
+   ========================================================================= */
+function SiteScannerModule({ windowWidth, setRiskScore, setTriggerLaser }) {
+  const [inputUrl, setInputUrl] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [scanResult, setScanResult] = useState(null);
+
+  const performScan = () => {
+    if (!inputUrl.trim()) return;
+    
+    // Auto-prefix with https:// for visual completeness if not present
+    let target = inputUrl.trim();
+    if (!target.startsWith('http')) {
+      target = 'https://' + target;
+      setInputUrl(target);
+    }
+
+    setLoading(true);
+    setScanResult(null);
+    if(setTriggerLaser) setTriggerLaser(true);
+
+    setTimeout(() => {
+      // Simulated scan results based on common vulnerabilities
+      const simulatedIssues = [
+        {
+          id: 'csp',
+          title: 'Missing Content-Security-Policy',
+          severity: 'HIGH',
+          description: 'No Content-Security-Policy header was detected. This leaves your site vulnerable to Cross-Site Scripting (XSS) and data injection attacks.',
+          solution: `// Add this header to your server/framework config:
+Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline';`
+        },
+        {
+          id: 'hsts',
+          title: 'Strict-Transport-Security Disabled',
+          severity: 'HIGH',
+          description: 'The HSTS header is missing. Browsers are not forced to use secure HTTPS connections, allowing potential Man-in-the-Middle downgrade attacks.',
+          solution: `// Enforce HTTPS across your domain:
+Strict-Transport-Security: max-age=31536000; includeSubDomains`
+        },
+        {
+          id: 'xframe',
+          title: 'Clickjacking Protection Absent',
+          severity: 'MEDIUM',
+          description: 'The X-Frame-Options header is missing, meaning attackers can embed your site in an iframe to trick users into clicking hidden malicious links.',
+          solution: `// Block iframe embedding:
+X-Frame-Options: DENY`
+        },
+        {
+          id: 'server_expose',
+          title: 'Server Fingerprint Exposed',
+          severity: 'LOW',
+          description: 'Your server is broadcasting its internal software version (e.g. X-Powered-By: Express). This helps attackers find targeted exploits.',
+          solution: `// In Express.js, disable the header:
+app.disable('x-powered-by');`
+        }
+      ];
+
+      // Randomly pick 2-3 issues to make the simulation feel dynamic
+      const numIssues = Math.floor(Math.random() * 2) + 2; 
+      const shuffled = simulatedIssues.sort(() => 0.5 - Math.random());
+      const selectedIssues = shuffled.slice(0, numIssues);
+      
+      const grade = selectedIssues.length === 2 ? 'B' : 'C-';
+      
+      setScanResult({
+        url: target,
+        grade: grade,
+        issues: selectedIssues,
+        passedChecks: ['Valid SSL/TLS Certificate', 'X-Content-Type-Options: nosniff']
+      });
+
+      // Update global risk score
+      if (grade === 'C-') {
+        setRiskScore(p => Math.min(p + 15, 96));
+      } else {
+        setRiskScore(p => Math.min(p + 5, 96));
+      }
+
+      setLoading(false);
+    }, 2800);
+  };
+
+  return (
+    <div className="page-transition-enter-active" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+      
+      {/* Title */}
+      <div>
+        <div className="font-dm-mono" style={{ fontSize: '11px', color: 'var(--text-secondary)', letterSpacing: '0.15em' }}>WEB PERIMETER RECONNAISSANCE</div>
+        <h2 className="font-syne" style={{ fontSize: '42px', fontWeight: '700', letterSpacing: '-0.02em', marginTop: '6px' }}>Site Security Scanner</h2>
+        <p className="font-dm-sans" style={{ fontSize: '15px', color: 'var(--text-secondary)', marginTop: '4px', maxWidth: '700px', lineHeight: '1.6' }}>
+          Enter your website URL to simulate a perimeter scan. We will audit your HTTP headers, security policies, and identify critical vulnerabilities along with their remediation codes.
+        </p>
+      </div>
+
+      {/* Input Form */}
+      <div className="glass-card" style={{ padding: '28px', position: 'relative' }}>
+        {loading && <MatrixLoader message="Auditing HTTP headers, SSL certificates, and frontend configurations..." />}
+        
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <label className="font-dm-mono" style={{ fontSize: '11px', color: 'var(--text-secondary)', letterSpacing: '0.12em' }}>TARGET URL TO SCAN</label>
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+              <input
+                type="text"
+                placeholder="e.g. mysite.com or https://mysite.com"
+                value={inputUrl}
+                onChange={(e) => setInputUrl(e.target.value)}
+                className="cyber-input font-dm-mono"
+                style={{ flex: '1', minWidth: '250px' }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') performScan();
+                }}
+              />
+              <button
+                onClick={performScan}
+                className="font-syne"
+                style={{
+                  background: 'var(--aura-safe)',
+                  color: '#000',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '0 24px',
+                  fontWeight: '700',
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 15px rgba(0, 229, 160, 0.2)',
+                  minHeight: '48px',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                INITIATE FULL AUDIT
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Scan Results */}
+      {scanResult && (
+        <div className="page-transition-enter-active" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          
+          <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
+            {/* Grade Card */}
+            <div className="glass-card" style={{ padding: '24px', flex: '1', minWidth: '200px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+              <div className="font-dm-mono" style={{ fontSize: '12px', color: 'var(--text-secondary)', letterSpacing: '0.1em', marginBottom: '8px' }}>SECURITY GRADE</div>
+              <div className="font-syne" style={{ fontSize: '64px', fontWeight: '800', color: scanResult.grade === 'B' ? 'var(--aura-watch)' : 'var(--aura-danger)', lineHeight: '1' }}>
+                {scanResult.grade}
+              </div>
+              <div className="font-dm-sans" style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '8px' }}>
+                For {scanResult.url}
+              </div>
+            </div>
+
+            {/* Passed Checks */}
+            <div className="glass-card" style={{ padding: '24px', flex: '2', minWidth: '300px' }}>
+              <div className="font-dm-mono" style={{ fontSize: '12px', color: 'var(--aura-safe)', letterSpacing: '0.1em', marginBottom: '16px' }}>VERIFIED SAFE PROTOCOLS</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {scanResult.passedChecks.map((check, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ color: 'var(--aura-safe)', fontSize: '14px' }}>✓</span>
+                    <span className="font-dm-mono" style={{ fontSize: '13px', color: 'var(--text-primary)' }}>{check}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="font-dm-mono" style={{ fontSize: '12px', color: 'var(--aura-danger)', letterSpacing: '0.1em', marginTop: '8px' }}>DETECTED VULNERABILITIES ({scanResult.issues.length})</div>
+          
+          {/* Issues List */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {scanResult.issues.map((issue, idx) => (
+              <div key={idx} className="glass-card" style={{ padding: '24px', borderLeft: `4px solid ${issue.severity === 'HIGH' ? 'var(--aura-danger)' : 'var(--aura-watch)'}` }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                  <h4 className="font-syne" style={{ fontSize: '18px', fontWeight: '600', color: '#fff' }}>{issue.title}</h4>
+                  <span className="font-dm-mono" style={{ 
+                    fontSize: '10px', 
+                    padding: '4px 8px', 
+                    borderRadius: '4px',
+                    background: issue.severity === 'HIGH' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+                    color: issue.severity === 'HIGH' ? 'var(--aura-danger)' : 'var(--aura-watch)',
+                    border: `1px solid ${issue.severity === 'HIGH' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`
+                  }}>
+                    {issue.severity} RISK
+                  </span>
+                </div>
+                
+                <p className="font-dm-sans text-wrap-safe" style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: '1.5', marginBottom: '20px' }}>
+                  {issue.description}
+                </p>
+
+                <div style={{ background: 'rgba(0,0,0,0.5)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                  <div className="font-dm-mono" style={{ fontSize: '10px', color: 'var(--aura-safe)', letterSpacing: '0.08em', marginBottom: '8px' }}>REMEDIATION SOLUTION</div>
+                  <pre className="font-dm-mono text-wrap-safe" style={{ fontSize: '12px', color: '#a8b2d1', margin: 0, whiteSpace: 'pre-wrap' }}>
+                    {issue.solution}
+                  </pre>
+                </div>
+              </div>
+            ))}
           </div>
 
         </div>

@@ -3005,12 +3005,15 @@ function FamilySafetyModule({ windowWidth }) {
 function SiteScannerModule({ windowWidth, setRiskScore, setTriggerLaser }) {
   const [inputUrl, setInputUrl] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('Initializing scan...');
   const [scanResult, setScanResult] = useState(null);
+  
+  // Use the provided Groq API key
+  const [apiKey, setApiKey] = useState('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');
 
-  const performScan = () => {
+  const performScan = async () => {
     if (!inputUrl.trim()) return;
     
-    // Auto-prefix with https:// for visual completeness if not present
     let target = inputUrl.trim();
     if (!target.startsWith('http')) {
       target = 'https://' + target;
@@ -3021,66 +3024,95 @@ function SiteScannerModule({ windowWidth, setRiskScore, setTriggerLaser }) {
     setScanResult(null);
     if(setTriggerLaser) setTriggerLaser(true);
 
-    setTimeout(() => {
-      // Simulated scan results based on common vulnerabilities
-      const simulatedIssues = [
-        {
-          id: 'csp',
-          title: 'Missing Content-Security-Policy',
-          severity: 'HIGH',
-          description: 'No Content-Security-Policy header was detected. This leaves your site vulnerable to Cross-Site Scripting (XSS) and data injection attacks.',
-          solution: `// Add this header to your server/framework config:
-Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline';`
-        },
-        {
-          id: 'hsts',
-          title: 'Strict-Transport-Security Disabled',
-          severity: 'HIGH',
-          description: 'The HSTS header is missing. Browsers are not forced to use secure HTTPS connections, allowing potential Man-in-the-Middle downgrade attacks.',
-          solution: `// Enforce HTTPS across your domain:
-Strict-Transport-Security: max-age=31536000; includeSubDomains`
-        },
-        {
-          id: 'xframe',
-          title: 'Clickjacking Protection Absent',
-          severity: 'MEDIUM',
-          description: 'The X-Frame-Options header is missing, meaning attackers can embed your site in an iframe to trick users into clicking hidden malicious links.',
-          solution: `// Block iframe embedding:
-X-Frame-Options: DENY`
-        },
-        {
-          id: 'server_expose',
-          title: 'Server Fingerprint Exposed',
-          severity: 'LOW',
-          description: 'Your server is broadcasting its internal software version (e.g. X-Powered-By: Express). This helps attackers find targeted exploits.',
-          solution: `// In Express.js, disable the header:
-app.disable('x-powered-by');`
-        }
-      ];
-
-      // Randomly pick 2-3 issues to make the simulation feel dynamic
-      const numIssues = Math.floor(Math.random() * 2) + 2; 
-      const shuffled = simulatedIssues.sort(() => 0.5 - Math.random());
-      const selectedIssues = shuffled.slice(0, numIssues);
+    try {
+      setLoadingMessage('Bypassing CORS and fetching live headers...');
       
-      const grade = selectedIssues.length === 2 ? 'B' : 'C-';
+      // 1. Fetch live headers using corsproxy.io
+      const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(target);
+      const res = await fetch(proxyUrl);
       
-      setScanResult({
-        url: target,
-        grade: grade,
-        issues: selectedIssues,
-        passedChecks: ['Valid SSL/TLS Certificate', 'X-Content-Type-Options: nosniff']
-      });
-
-      // Update global risk score
-      if (grade === 'C-') {
-        setRiskScore(p => Math.min(p + 15, 96));
-      } else {
-        setRiskScore(p => Math.min(p + 5, 96));
+      const headersObj = {};
+      for (const [key, value] of res.headers.entries()) {
+        // Ignore CORS proxy specific headers if possible, though corsproxy passes through mostly
+        headersObj[key] = value;
       }
 
+      setLoadingMessage('Transmitting headers to Groq AI for security audit...');
+
+      // 2. Send to Groq for analysis
+      const prompt = `You are a Senior Application Security Engineer. I am providing you with the HTTP response headers of a target URL.
+Analyze these headers for security vulnerabilities (e.g., missing Content-Security-Policy, missing Strict-Transport-Security (HSTS), missing X-Frame-Options, missing X-Content-Type-Options, or exposed Server fingerprints).
+
+Headers from ${target}:
+${JSON.stringify(headersObj, null, 2)}
+
+Return a JSON object STRICTLY following this structure, with no markdown formatting or extra text outside the JSON:
+{
+  "grade": "A, B, C, D, or F",
+  "passedChecks": ["List of 2-3 secure headers that were actually found, or 'Standard connection established' if none"],
+  "issues": [
+    {
+      "id": "short_id",
+      "title": "Vulnerability Title",
+      "severity": "HIGH or MEDIUM or LOW",
+      "description": "Explanation of the risk",
+      "solution": "Code snippet or exact header config to fix this"
+    }
+  ]
+}`;
+
+      const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          messages: [{ role: "user", content: prompt }],
+          model: "llama-3.1-8b-instant",
+          response_format: { type: "json_object" }
+        })
+      });
+
+      const groqData = await groqRes.json();
+      
+      if (groqData.error) {
+        throw new Error(groqData.error.message || "Groq API Error");
+      }
+
+      const aiReport = JSON.parse(groqData.choices[0].message.content);
+
+      setScanResult({
+        url: target,
+        grade: aiReport.grade || 'C',
+        issues: aiReport.issues || [],
+        passedChecks: aiReport.passedChecks || []
+      });
+
+      // Update global risk score based on grade
+      if (['D', 'F'].includes(aiReport.grade)) {
+        setRiskScore(p => Math.min(p + 20, 96));
+      } else if (['A', 'B'].includes(aiReport.grade)) {
+        setRiskScore(p => Math.max(p - 10, 12));
+      }
+
+    } catch (err) {
+      console.error(err);
+      setScanResult({
+        url: target,
+        grade: 'ERR',
+        issues: [{
+          id: 'err',
+          title: 'Scan Execution Failed',
+          severity: 'HIGH',
+          description: `An error occurred during the live scan: ${err.message}`,
+          solution: 'Check the target URL validity, or ensure the Groq API key is active and not rate-limited.'
+        }],
+        passedChecks: []
+      });
+    } finally {
       setLoading(false);
-    }, 2800);
+    }
   };
 
   return (
@@ -3088,16 +3120,16 @@ app.disable('x-powered-by');`
       
       {/* Title */}
       <div>
-        <div className="font-dm-mono" style={{ fontSize: '11px', color: 'var(--text-secondary)', letterSpacing: '0.15em' }}>WEB PERIMETER RECONNAISSANCE</div>
+        <div className="font-dm-mono" style={{ fontSize: '11px', color: 'var(--text-secondary)', letterSpacing: '0.15em' }}>LIVE AI-POWERED RECONNAISSANCE</div>
         <h2 className="font-syne" style={{ fontSize: '42px', fontWeight: '700', letterSpacing: '-0.02em', marginTop: '6px' }}>Site Security Scanner</h2>
         <p className="font-dm-sans" style={{ fontSize: '15px', color: 'var(--text-secondary)', marginTop: '4px', maxWidth: '700px', lineHeight: '1.6' }}>
-          Enter your website URL to simulate a perimeter scan. We will audit your HTTP headers, security policies, and identify critical vulnerabilities along with their remediation codes.
+          Enter your website URL to perform a live perimeter scan. We bypass CORS to audit your live HTTP headers, then stream the data through Groq (LLaMA 3) to intelligently identify vulnerabilities and exact remediation codes.
         </p>
       </div>
 
       {/* Input Form */}
       <div className="glass-card" style={{ padding: '28px', position: 'relative' }}>
-        {loading && <MatrixLoader message="Auditing HTTP headers, SSL certificates, and frontend configurations..." />}
+        {loading && <MatrixLoader message={loadingMessage} />}
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -3131,7 +3163,7 @@ app.disable('x-powered-by');`
                   whiteSpace: 'nowrap'
                 }}
               >
-                INITIATE FULL AUDIT
+                EXECUTE LIVE AUDIT
               </button>
             </div>
           </div>
@@ -3146,7 +3178,7 @@ app.disable('x-powered-by');`
             {/* Grade Card */}
             <div className="glass-card" style={{ padding: '24px', flex: '1', minWidth: '200px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
               <div className="font-dm-mono" style={{ fontSize: '12px', color: 'var(--text-secondary)', letterSpacing: '0.1em', marginBottom: '8px' }}>SECURITY GRADE</div>
-              <div className="font-syne" style={{ fontSize: '64px', fontWeight: '800', color: scanResult.grade === 'B' ? 'var(--aura-watch)' : 'var(--aura-danger)', lineHeight: '1' }}>
+              <div className="font-syne" style={{ fontSize: '64px', fontWeight: '800', color: ['A', 'B'].includes(scanResult.grade) ? 'var(--aura-safe)' : (['C'].includes(scanResult.grade) ? 'var(--aura-watch)' : 'var(--aura-danger)'), lineHeight: '1' }}>
                 {scanResult.grade}
               </div>
               <div className="font-dm-sans" style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '8px' }}>
@@ -3173,16 +3205,16 @@ app.disable('x-powered-by');`
           {/* Issues List */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {scanResult.issues.map((issue, idx) => (
-              <div key={idx} className="glass-card" style={{ padding: '24px', borderLeft: `4px solid ${issue.severity === 'HIGH' ? 'var(--aura-danger)' : 'var(--aura-watch)'}` }}>
+              <div key={idx} className="glass-card" style={{ padding: '24px', borderLeft: `4px solid ${issue.severity === 'HIGH' ? 'var(--aura-danger)' : (issue.severity === 'LOW' ? 'var(--aura-info)' : 'var(--aura-watch)')}` }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
                   <h4 className="font-syne" style={{ fontSize: '18px', fontWeight: '600', color: '#fff' }}>{issue.title}</h4>
                   <span className="font-dm-mono" style={{ 
                     fontSize: '10px', 
                     padding: '4px 8px', 
                     borderRadius: '4px',
-                    background: issue.severity === 'HIGH' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.1)',
-                    color: issue.severity === 'HIGH' ? 'var(--aura-danger)' : 'var(--aura-watch)',
-                    border: `1px solid ${issue.severity === 'HIGH' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`
+                    background: issue.severity === 'HIGH' ? 'rgba(239, 68, 68, 0.1)' : (issue.severity === 'LOW' ? 'rgba(59, 130, 246, 0.1)' : 'rgba(245, 158, 11, 0.1)'),
+                    color: issue.severity === 'HIGH' ? 'var(--aura-danger)' : (issue.severity === 'LOW' ? 'var(--aura-info)' : 'var(--aura-watch)'),
+                    border: `1px solid ${issue.severity === 'HIGH' ? 'rgba(239, 68, 68, 0.3)' : (issue.severity === 'LOW' ? 'rgba(59, 130, 246, 0.3)' : 'rgba(245, 158, 11, 0.3)')}`
                   }}>
                     {issue.severity} RISK
                   </span>

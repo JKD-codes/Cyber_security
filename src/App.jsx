@@ -131,6 +131,8 @@ export default function App() {
         return <DashboardModule windowWidth={windowWidth} auraColor={auraColor} riskScore={riskScore} setRiskScore={setRiskScore} />;
       case 'scam-detector':
         return <ScamDetectorModule windowWidth={windowWidth} setRiskScore={setRiskScore} />;
+      case 'site-scanner':
+        return <SiteScannerModule windowWidth={windowWidth} setRiskScore={setRiskScore} setTriggerLaser={setTriggerLaser} />;
       case 'footprint':
         return <FootprintModule windowWidth={windowWidth} setRiskScore={setRiskScore} setTriggerLaser={setTriggerLaser} />;
       case 'simulator':

@@ -3028,13 +3028,18 @@ function SiteScannerModule({ windowWidth, setRiskScore, setTriggerLaser }) {
       setLoadingMessage('Bypassing CORS and fetching live headers...');
       
       // 1. Fetch live headers using corsproxy.io
-      const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(target);
+      const proxyUrl = 'https://api.hackertarget.com/httpheaders/?q=' + encodeURIComponent(target);
       const res = await fetch(proxyUrl);
+      const rawText = await res.text();
       
       const headersObj = {};
-      for (const [key, value] of res.headers.entries()) {
-        // Ignore CORS proxy specific headers if possible, though corsproxy passes through mostly
-        headersObj[key] = value;
+      // Parse the raw text headers returned by HackerTarget
+      const lines = rawText.split('\n');
+      for (const line of lines) {
+        if (line.includes(': ')) {
+          const [key, ...valParts] = line.split(': ');
+          headersObj[key.trim().toLowerCase()] = valParts.join(': ').trim();
+        }
       }
 
       setLoadingMessage('Transmitting headers to Groq AI for security audit...');

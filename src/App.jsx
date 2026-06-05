@@ -281,6 +281,7 @@ export default function App() {
           {[
             { id: 'dashboard', label: 'Center', icon: '📊' },
             { id: 'scam-detector', label: 'Audit', icon: '🔍' },
+            { id: 'site-scanner', label: 'Scanner', icon: '🌐' },
             { id: 'footprint', label: 'OWASP', icon: '👣' },
             { id: 'simulator', label: 'Labs', icon: '🧪' },
             { id: 'family-safety', label: 'Family', icon: '🏠' }

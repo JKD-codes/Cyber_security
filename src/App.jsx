@@ -1229,6 +1229,7 @@ function DashboardModule({ windowWidth, auraColor, riskScore, setRiskScore }) {
   const [breachResult, setBreachResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [backendHealth, setBackendHealth] = useState(null);
 
   // 3D Card tilt handlers for premium microinteractions
   const handleCardTilt = (e) => {
@@ -1302,8 +1303,33 @@ function DashboardModule({ windowWidth, auraColor, riskScore, setRiskScore }) {
 
       {/* CENTERPIECE: Native 3D Interactive Attack Projection Globe & Synchronized Telemetry Feed */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        <div className="font-dm-mono" style={{ fontSize: '11px', color: 'var(--text-secondary)', letterSpacing: '0.12em' }}>
-          🌐 LIVE 3D GEOGRAPHIC VECTOR MAP & IMPACT LOGS
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="font-dm-mono" style={{ fontSize: '11px', color: 'var(--text-secondary)', letterSpacing: '0.12em' }}>
+            🌐 LIVE 3D GEOGRAPHIC VECTOR MAP & IMPACT LOGS
+          </div>
+          <button 
+            onClick={async () => {
+              try {
+                const res = await fetch('/api/health');
+                const data = await res.json();
+                setBackendHealth(data.status === 'ok' ? 'ONLINE' : 'ERROR');
+              } catch (e) {
+                setBackendHealth('OFFLINE');
+              }
+            }}
+            className="font-dm-mono"
+            style={{
+              background: backendHealth === 'ONLINE' ? 'rgba(0, 229, 160, 0.1)' : 'rgba(255, 255, 255, 0.05)',
+              border: `1px solid ${backendHealth === 'ONLINE' ? 'var(--aura-safe)' : 'rgba(255,255,255,0.1)'}`,
+              color: backendHealth === 'ONLINE' ? 'var(--aura-safe)' : '#fff',
+              padding: '6px 12px',
+              borderRadius: '4px',
+              fontSize: '10px',
+              cursor: 'pointer'
+            }}
+          >
+            {backendHealth ? `BACKEND: ${backendHealth}` : 'TEST FASTAPI BACKEND'}
+          </button>
         </div>
         <ThreatGlobe windowWidth={windowWidth} auraColor={auraColor} />
       </div>

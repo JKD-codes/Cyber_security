@@ -3051,84 +3051,40 @@ function SiteScannerModule({ windowWidth, setRiskScore, setTriggerLaser }) {
     if(setTriggerLaser) setTriggerLaser(true);
 
     try {
-      setLoadingMessage('Bypassing CORS and fetching live headers...');
+      setLoadingMessage('Transmitting to State-of-the-Art Security Heuristics Engine...');
       
-      // 1. Fetch live headers using corsproxy.io
-      const proxyUrl = 'https://api.hackertarget.com/httpheaders/?q=' + encodeURIComponent(target);
-      const res = await fetch(proxyUrl);
-      const rawText = await res.text();
-      
-      const headersObj = {};
-      // Parse the raw text headers returned by HackerTarget
-      const lines = rawText.split('\n');
-      for (const line of lines) {
-        if (line.includes(': ')) {
-          const [key, ...valParts] = line.split(': ');
-          headersObj[key.trim().toLowerCase()] = valParts.join(': ').trim();
-        }
+      // Fetch analysis from our new FastAPI backend
+      const res = await fetch('/api/scan/headers?url=' + encodeURIComponent(target));
+      if (!res.ok) {
+        throw new Error(await res.text() || "Failed to scan target");
       }
-
-      setLoadingMessage('Transmitting headers to Groq AI for security audit...');
-
-      // 2. Send to Groq for analysis
-      const prompt = `You are a Senior Application Security Engineer. I am providing you with the HTTP response headers of a target URL.
-Analyze these headers for security vulnerabilities (e.g., missing Content-Security-Policy, missing Strict-Transport-Security (HSTS), missing X-Frame-Options, missing X-Content-Type-Options, or exposed Server fingerprints).
-
-Headers from ${target}:
-${JSON.stringify(headersObj, null, 2)}
-
-Return a JSON object STRICTLY following this structure, with no markdown formatting or extra text outside the JSON:
-{
-  "grade": "A, B, C, D, or F",
-  "passedChecks": ["List of 2-3 secure headers that were actually found, or 'Standard connection established' if none"],
-  "issues": [
-    {
-      "id": "short_id",
-      "title": "Vulnerability Title",
-      "severity": "HIGH or MEDIUM or LOW",
-      "description": "Explanation of the risk",
-      "solution": "Code snippet or exact header config to fix this"
-    }
-  ]
-}`;
-
-      const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${apiKey}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          messages: [{ role: "user", content: prompt }],
-          model: "llama-3.1-8b-instant",
-          response_format: { type: "json_object" }
-        })
-      });
-
-      const groqData = await groqRes.json();
       
-      if (groqData.error) {
-        throw new Error(groqData.error.message || "Groq API Error");
-      }
-
-      const aiReport = JSON.parse(groqData.choices[0].message.content);
+      const data = await res.json();
 
       setScanResult({
-        url: target,
-        grade: aiReport.grade || 'C',
-        issues: aiReport.issues || [],
-        passedChecks: aiReport.passedChecks || []
+        url: data.url,
+        grade: data.grade,
+        issues: data.issues || [],
+        passedChecks: data.passedChecks || []
       });
 
       // Update global risk score based on grade
-      if (['D', 'F'].includes(aiReport.grade)) {
+      if (['D', 'F'].includes(data.grade)) {
         setRiskScore(p => Math.min(p + 20, 96));
-      } else if (['A', 'B'].includes(aiReport.grade)) {
+      } else if (['A', 'B'].includes(data.grade)) {
         setRiskScore(p => Math.max(p - 10, 12));
       }
 
     } catch (err) {
       console.error(err);
+      
+      // Attempt to parse FastAPI HTTPException detail
+      let errorMessage = err.message;
+      try {
+         const parsed = JSON.parse(err.message);
+         if (parsed.detail) errorMessage = parsed.detail;
+      } catch (e) {}
+
       setScanResult({
         url: target,
         grade: 'ERR',
@@ -3136,8 +3092,8 @@ Return a JSON object STRICTLY following this structure, with no markdown formatt
           id: 'err',
           title: 'Scan Execution Failed',
           severity: 'HIGH',
-          description: `An error occurred during the live scan: ${err.message}`,
-          solution: 'Check the target URL validity, or ensure the Groq API key is active and not rate-limited.'
+          description: `An error occurred during the live scan: ${errorMessage}`,
+          solution: 'Check the target URL validity, or ensure the target site is not blocking automated requests.'
         }],
         passedChecks: []
       });

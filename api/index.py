@@ -135,17 +135,60 @@ async def scan_headers(url: str):
         # User-Agent spoofing to bypass basic bot blocks
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
         async with httpx.AsyncClient(timeout=10.0, follow_redirects=True, verify=False) as client:
+            # 1. Primary Header Scan
             response = await client.get(url, headers=headers)
             
             raw_headers = dict(response.headers)
             analysis = analyze_headers(raw_headers)
             
+            # 2. Active Sensitive File Probing
+            # We are firing off quick checks for critical file exposures
+            probe_issues = []
+            probe_passed = []
+            
+            probes = [
+                {"path": "/.env", "name": "Exposed .env File", "severity": "CRITICAL", "description": "An environment file was found exposed to the public internet. This often contains live database passwords, API keys, and secret tokens.", "solution": "Block access to hidden files (starting with a dot) in your web server configuration."},
+                {"path": "/.git/config", "name": "Exposed Git Repository", "severity": "CRITICAL", "description": "The .git folder is publicly accessible. Attackers can download your entire source code history and proprietary algorithms.", "solution": "Block access to the .git directory immediately."},
+                {"path": "/.well-known/security.txt", "name": "Security.txt Discovered", "severity": "INFO", "description": "This site has a standard security.txt file, indicating they have a mature security vulnerability disclosure process.", "solution": "No action needed."}
+            ]
+
+            # Parse base URL to strip off paths for probing
+            from urllib.parse import urlparse
+            parsed = urlparse(url)
+            base_url = f"{parsed.scheme}://{parsed.netloc}"
+
+            for probe in probes:
+                probe_url = base_url + probe["path"]
+                try:
+                    # Very short timeout so we don't hold up the UI
+                    probe_resp = await client.get(probe_url, headers=headers, timeout=4.0, follow_redirects=False)
+                    if probe_resp.status_code == 200:
+                        text = probe_resp.text.lower()
+                        # Verify content to prevent false positives from generic 200 OK error pages
+                        if probe["path"] == "/.env" and ("=" in text and ("db" in text or "key" in text or "secret" in text)):
+                            probe_issues.append({"id": "env_exposed", "title": probe["name"], "severity": probe["severity"], "description": probe["description"], "solution": probe["solution"]})
+                        elif probe["path"] == "/.git/config" and ("[core]" in text):
+                            probe_issues.append({"id": "git_exposed", "title": probe["name"], "severity": probe["severity"], "description": probe["description"], "solution": probe["solution"]})
+                        elif probe["path"] == "/.well-known/security.txt" and ("contact:" in text):
+                            probe_passed.append("Official Security.txt policy found")
+                except Exception:
+                    pass # Ignore timeouts on probes
+            
+            # Merge probe results into main analysis
+            all_issues = analysis["issues"] + probe_issues
+            all_passed = analysis["passedChecks"] + probe_passed
+
+            # Recalculate Grade if CRITICAL issues were found
+            grade = analysis["grade"]
+            if probe_issues:
+                grade = "F" # Instant fail if .env or .git is exposed!
+
             return {
                 "url": url,
                 "status_code": response.status_code,
-                "grade": analysis["grade"],
-                "passedChecks": analysis["passedChecks"],
-                "issues": analysis["issues"]
+                "grade": grade,
+                "passedChecks": all_passed,
+                "issues": all_issues
             }
     except httpx.TimeoutException:
         raise HTTPException(status_code=504, detail="Scan timed out. Target might be offline or blocking requests.")

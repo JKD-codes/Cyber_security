@@ -164,10 +164,14 @@ async def scan_headers(url: str):
                     probe_resp = await client.get(probe_url, headers=headers, timeout=4.0, follow_redirects=False)
                     if probe_resp.status_code == 200:
                         text = probe_resp.text.lower()
+                        
+                        # Soft-404 Detection: Real .env or .git files are raw text. If we see HTML tags, it's a generic error page masquerading as a 200 OK.
+                        is_html = "<html" in text or "<body" in text or "<!doctype html" in text
+                        
                         # Verify content to prevent false positives from generic 200 OK error pages
-                        if probe["path"] == "/.env" and ("=" in text and ("db" in text or "key" in text or "secret" in text)):
+                        if probe["path"] == "/.env" and not is_html and ("=" in text and ("db" in text or "key" in text or "secret" in text)):
                             probe_issues.append({"id": "env_exposed", "title": probe["name"], "severity": probe["severity"], "description": probe["description"], "solution": probe["solution"]})
-                        elif probe["path"] == "/.git/config" and ("[core]" in text):
+                        elif probe["path"] == "/.git/config" and not is_html and ("[core]" in text):
                             probe_issues.append({"id": "git_exposed", "title": probe["name"], "severity": probe["severity"], "description": probe["description"], "solution": probe["solution"]})
                         elif probe["path"] == "/.well-known/security.txt" and ("contact:" in text):
                             probe_passed.append("Official Security.txt policy found")

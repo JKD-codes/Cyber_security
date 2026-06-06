@@ -346,35 +346,22 @@ export default function App() {
    ========================================================================= */
 function MatrixLoader({ message }) {
   const [currentText, setCurrentText] = useState(message || "Analyzing system files...");
-  const [matrixSpans, setMatrixSpans] = useState([]);
 
   useEffect(() => {
     const messages = [
       "Hashing input structures...",
-      "Analyzing URL structure and homograph signatures...",
-      "Cross-referencing against threat intelligence databases...",
-      "Verifying SSL/TLS certificate chain integrity...",
-      "Scanning for malicious payload indicators..."
+      "Analyzing network signatures...",
+      "Cross-referencing intelligence...",
+      "Verifying security protocols...",
+      "Compiling heuristic diagnostics..."
     ];
     let msgIndex = 0;
     const interval = setInterval(() => {
       msgIndex = (msgIndex + 1) % messages.length;
       setCurrentText(messages[msgIndex]);
-    }, 900);
+    }, 1500);
 
     return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    const chars = "0101XYZΩΨΦ🛡️🔍🔐🔴🟢";
-    const newSpans = Array.from({ length: 15 }).map((_, idx) => {
-      const char = chars.charAt(Math.floor(Math.random() * chars.length));
-      const left = Math.floor(Math.random() * 95) + '%';
-      const delay = (Math.random() * 2).toFixed(2) + 's';
-      const fontSize = (12 + Math.random() * 14) + 'px';
-      return { id: idx, char, left, delay, fontSize };
-    });
-    setMatrixSpans(newSpans);
   }, []);
 
   return (
@@ -384,8 +371,8 @@ function MatrixLoader({ message }) {
       left: 0,
       right: 0,
       bottom: 0,
-      background: 'rgba(5, 5, 8, 0.96)',
-      backdropFilter: 'blur(12px)',
+      background: 'rgba(5, 5, 8, 0.90)',
+      backdropFilter: 'blur(8px)',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
@@ -394,52 +381,60 @@ function MatrixLoader({ message }) {
       zIndex: 100,
       overflow: 'hidden'
     }}>
-      {/* Raining characters */}
-      <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
-        {matrixSpans.map((item) => (
-          <span 
-            key={item.id} 
-            className="font-dm-mono"
-            style={{
-              position: 'absolute',
-              color: Math.random() > 0.5 ? 'var(--aura-safe)' : 'var(--aura-purple)',
-              fontFamily: 'DM Mono',
-              fontSize: item.fontSize,
-              fontWeight: '500',
-              left: item.left,
-              animation: 'matrix-fall 2.8s linear infinite',
-              animationDelay: item.delay,
-              pointerEvents: 'none',
-              top: '-30px',
-              opacity: 0
-            }}
-          >
-            {item.char}
-          </span>
-        ))}
+      {/* Sleek Pulse Animation */}
+      <div style={{
+        position: 'relative',
+        width: '80px',
+        height: '80px',
+        marginBottom: '32px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        {/* Outer expanding ring */}
+        <div style={{
+          position: 'absolute',
+          width: '100%',
+          height: '100%',
+          border: '2px solid var(--aura-safe)',
+          borderRadius: '50%',
+          animation: 'pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite'
+        }} />
+        
+        {/* Inner delayed ring */}
+        <div style={{
+          position: 'absolute',
+          width: '60%',
+          height: '60%',
+          border: '2px solid var(--aura-info)',
+          borderRadius: '50%',
+          animation: 'pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite',
+          animationDelay: '0.6s'
+        }} />
+
+        {/* Center glowing core */}
+        <div style={{
+          position: 'absolute',
+          width: '16px',
+          height: '16px',
+          background: 'var(--aura-safe)',
+          borderRadius: '50%',
+          boxShadow: '0 0 20px var(--aura-safe)',
+          animation: 'glow-breathe 2s ease-in-out infinite'
+        }} />
       </div>
 
-      <div 
-        style={{
-          fontSize: '48px',
-          animation: 'glow-breathe 2s ease-in-out infinite',
-          marginBottom: '16px',
-          zIndex: 10
-        }}
-      >
-        📡
-      </div>
-
+      {/* Loading Text */}
       <div 
         className="font-dm-mono" 
         style={{ 
           fontSize: '13px', 
-          color: 'var(--aura-info)', 
-          letterSpacing: '0.08em', 
+          color: 'var(--text-secondary)', 
+          letterSpacing: '0.15em', 
           textAlign: 'center', 
           zIndex: 10,
-          textShadow: '0 0 10px rgba(77, 166, 255, 0.3)',
-          padding: '0 16px'
+          padding: '0 16px',
+          textShadow: '0 0 10px rgba(0, 0, 0, 0.5)'
         }}
       >
         {currentText.toUpperCase()}

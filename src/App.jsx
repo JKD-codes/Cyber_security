@@ -3034,9 +3034,7 @@ function SiteScannerModule({ windowWidth, setRiskScore, setTriggerLaser }) {
   const [loadingMessage, setLoadingMessage] = useState('Initializing scan...');
   const [scanResult, setScanResult] = useState(null);
   
-  // Use the provided Groq API key
-  const [apiKey, setApiKey] = useState('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');
-
+  // API Key removed for security
   const performScan = async () => {
     if (!inputUrl.trim()) return;
     

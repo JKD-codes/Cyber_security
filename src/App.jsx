@@ -1100,7 +1100,7 @@ function ShieldSOCSidebar({ isExpanded, setIsExpanded, floatingIndex, isMobile }
           position: 'fixed',
           top: isMobile ? '0' : '24px',
           bottom: isMobile ? '0' : '24px',
-          right: isExpanded ? '24px' : '-360px',
+          right: isExpanded ? (isMobile ? '0' : '24px') : (isMobile ? '-100vw' : '-360px'),
           width: isMobile ? '100vw' : '330px',
           height: isMobile ? '100%' : 'calc(100vh - 48px)',
           borderRadius: isMobile ? '0' : '16px',
@@ -1638,156 +1638,25 @@ function ScamDetectorModule({ windowWidth, setRiskScore }) {
   const [result, setResult] = useState(null);
   const [activeAccordion, setActiveAccordion] = useState('explanation');
 
-  const executeHeuristicAnalysis = () => {
+  const executeHeuristicAnalysis = async () => {
     const input = inputText.trim();
     if (!input) return;
 
     setLoading(true);
     setResult(null);
 
-    // Simulate scanner delay
-    setTimeout(() => {
-      let isUrl = false;
-      try {
-        // Simple check if looks like URL
-        if (input.includes('.') && (input.toLowerCase().startsWith('http') || input.toLowerCase().startsWith('www') || input.split(' ')[0].includes('.'))) {
-          isUrl = true;
-        }
-      } catch (e) {}
+    try {
+      const response = await fetch('http://localhost:8000/api/analyze/scam', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: input })
+      });
 
-      let analysisResult = {};
-
-      if (isUrl) {
-        // ------------------ DYNAMIC URL AUDITOR ------------------
-        const urlLower = input.toLowerCase();
-        let scamProb = 12;
-        let redFlags = [];
-        let tactics = ["Domain Inspection"];
-        let verdict = "SAFE";
-        let urgency = "LOW";
-        let recommendation = "URL appears consistent with secure public registration records. Double-check standard certificate padlocks.";
-
-        // 1. Insecure Connection check
-        if (urlLower.startsWith('http://')) {
-          scamProb += 24;
-          redFlags.push("Uses insecure http:// protocol instead of encrypted https://");
-          tactics.push("Protocol Downgrade");
-        }
-
-        // 2. High-Risk Scam TLDs
-        const scamTlds = ['.xyz', '.cc', '.top', '.tk', '.ml', '.ga', '.cf', '.gq', '.net.ru', '.work', '.info'];
-        const matchedTld = scamTlds.find(tld => urlLower.includes(tld));
-        if (matchedTld) {
-          scamProb += 35;
-          redFlags.push(`Uses generic high-risk TLD (${matchedTld}) popular in coordinate scam campaigns`);
-          tactics.push("Generic TLD Exploitation");
-        }
-
-        // 3. Indian Brand Homoglyphs / Typosquatting
-        const homoglyphs = [
-          { keyword: 'paytrn', targets: 'Paytm' },
-          { keyword: 'paytm-rewards', targets: 'Paytm Rewards' },
-          { keyword: 'gpay-bonus', targets: 'Google Pay' },
-          { keyword: 'sbi-kyc', targets: 'State Bank of India (SBI)' },
-          { keyword: 'sbi-login', targets: 'SBI Portal' },
-          { keyword: 'hdfc-secure', targets: 'HDFC Bank' },
-          { keyword: 'amozon', targets: 'Amazon India' },
-          { keyword: 'filpkart', targets: 'Flipkart' }
-        ];
-
-        const matchedHomo = homoglyphs.find(h => urlLower.includes(h.keyword));
-        if (matchedHomo) {
-          scamProb += 48;
-          redFlags.push(`Typosquatting Match: Mimics trusted Indian brand "${matchedHomo.targets}" using lookalike letters ("${matchedHomo.keyword}")`);
-          tactics.push("Brand Impersonation");
-          tactics.push("Lookalike Typosquatting");
-        }
-
-        // Finalize score limits
-        scamProb = Math.min(scamProb, 99);
-
-        if (scamProb > 70) {
-          verdict = "SCAM";
-          urgency = "CRITICAL";
-          recommendation = "DO NOT ACCESS. Close the page immediately. Do not submit primary login cards, Aadhaar fields, or passwords.";
-        } else if (scamProb > 30) {
-          verdict = "SUSPICIOUS";
-          urgency = "HIGH";
-          recommendation = "EXERCISE EXTREME CAUTION. Check the domain prefix against official records before filling text fields.";
-        }
-
-        analysisResult = {
-          scamProbability: scamProb,
-          verdict: verdict,
-          manipulationTactics: tactics,
-          redFlags: redFlags.length > 0 ? redFlags : ["No active homoglyph patterns detected", "Certificate matches security registers"],
-          recommendation: recommendation,
-          explanation: `URL analysis audit for "${input}". Our engine checked protocol handshakes, TLD reputation indices, and parsed character maps to search for Lookalike Impersonations (homoglyph scams).${verdict === 'SCAM' ? ' This site matches templates engineered to hijack personal profiles.' : ' The domain appears standard.'}`,
-          urgencyLevel: urgency
-        };
-
-      } else {
-        // ------------------ DYNAMIC SCAM TEXT AUDITOR ------------------
-        let scamProb = 8;
-        let redFlags = [];
-        let tactics = ["Linguistic Heuristics"];
-        let verdict = "SAFE";
-        let urgency = "LOW";
-        let recommendation = "Message content appears informational. Follow normal safety directories.";
-
-        const lowerText = input.toLowerCase();
-
-        // 1. High-Pressure words
-        if (lowerText.includes('otp') || lowerText.includes('verification code') || lowerText.includes('pin')) {
-          scamProb += 22;
-          redFlags.push("Requests confidential security authorization codes (OTP / PIN)");
-          tactics.push("Credential Harvesting");
-        }
-
-        // 2. Immediate Panic triggers
-        if (lowerText.includes('electricity') || lowerText.includes('power cut') || lowerText.includes('disconnection') || lowerText.includes('suspend') || lowerText.includes('block')) {
-          scamProb += 26;
-          redFlags.push("Threatens immediate service deactivation (power lines, bank accounts, Aadhaar locks)");
-          tactics.push("Urgency Trigger");
-        }
-
-        // 3. Indian Scams context
-        if (lowerText.includes('kyc') || lowerText.includes('pension') || lowerText.includes('subsidy') || lowerText.includes('kisan') || lowerText.includes('pan card')) {
-          scamProb += 20;
-          redFlags.push("References official Indian government updates (KYC, Kisan, PAN) to build fake authority");
-          tactics.push("Authority Impersonation");
-        }
-
-        // 4. Financial lure
-        if (lowerText.includes('lottery') || lowerText.includes('reward') || lowerText.includes('win') || lowerText.includes('bonus') || lowerText.includes('refund')) {
-          scamProb += 24;
-          redFlags.push("Offers unrequested financial refunds or cash bonuses");
-          tactics.push("Financial Bait");
-        }
-
-        scamProb = Math.min(scamProb, 99);
-
-        if (scamProb > 70) {
-          verdict = "SCAM";
-          urgency = "CRITICAL";
-          recommendation = "DO NOT CLICK ANY LINKS OR DIAL THE SENDER. Block the phone line. Report the number immediately to the Indian Cyber crime department (Helpline: 1930).";
-        } else if (scamProb > 30) {
-          verdict = "SUSPICIOUS";
-          urgency = "HIGH";
-          recommendation = "DO NOT SHARE OTPs. Reach out directly to your banking branch or utility company using their official support hotline.";
-        }
-
-        analysisResult = {
-          scamProbability: scamProb,
-          verdict: verdict,
-          manipulationTactics: tactics,
-          redFlags: redFlags.length > 0 ? redFlags : ["No active threat verbs detected", "Presents generic linguistic structure"],
-          recommendation: recommendation,
-          explanation: `Linguistic heuristics scan of your text. Checked for high-pressure service threats, Aadhaar verification triggers, credential request logs, and financial cash baits popular in Indian SMS campaigns.`,
-          urgencyLevel: urgency
-        };
+      if (!response.ok) {
+        throw new Error('Backend analysis failed');
       }
 
+      const analysisResult = await response.json();
       setResult(analysisResult);
       setLoading(false);
 
@@ -1799,8 +1668,19 @@ function ScamDetectorModule({ windowWidth, setRiskScore }) {
       } else {
         setRiskScore((p) => Math.max(p - 6, 12));
       }
-
-    }, 2000);
+    } catch (err) {
+      console.error(err);
+      setResult({
+        scamProbability: 0,
+        verdict: "SAFE",
+        manipulationTactics: ["Error connecting to backend"],
+        redFlags: ["Analysis failed to execute"],
+        recommendation: "Ensure Python backend is running on port 8000.",
+        explanation: "The connection to the threat intelligence engine was refused.",
+        urgencyLevel: "LOW"
+      });
+      setLoading(false);
+    }
   };
 
   const getVerdictStyles = (v) => {
@@ -2558,6 +2438,8 @@ function AttackSimulatorModule({ windowWidth }) {
               </div>
             );
           })}
+          {/* Spacer to prevent right-side scroll clipping on mobile */}
+          <div style={{ minWidth: '16px', flexShrink: 0 }}></div>
         </div>
       </div>
 

@@ -1859,7 +1859,7 @@ function ScamDetectorModule({ windowWidth, setRiskScore }) {
             disabled={!inputText.trim() || loading}
             className="font-syne"
             style={{
-              background: inputText.trim() ? 'linear-gradient(90deg, var(--aura-danger) 0%, var(--aura-purple) 100%)' : 'var(--surface-3)',
+              background: inputText.trim() ? 'linear-gradient(90deg, var(--aura-purple) 0%, #7d44ff 100%)' : 'var(--surface-3)',
               color: inputText.trim() ? '#fff' : 'var(--text-muted)',
               border: 'none',
               borderRadius: '8px',
@@ -2528,7 +2528,10 @@ function AttackSimulatorModule({ windowWidth }) {
           display: 'flex',
           gap: '16px',
           overflowX: 'auto',
-          paddingBottom: '8px'
+          paddingTop: '8px',
+          paddingBottom: '8px',
+          paddingLeft: '8px',
+          paddingRight: '8px'
         }}>
           {SIMULATED_ATTACKS.map((item) => {
             const isSelected = selectedSim.id === item.id;
@@ -2542,8 +2545,8 @@ function AttackSimulatorModule({ windowWidth }) {
                   flex: '0 0 auto',
                   padding: '20px',
                   cursor: 'pointer',
-                  borderColor: isSelected ? 'var(--aura-danger)' : 'var(--border)',
-                  background: isSelected ? 'rgba(255, 61, 90, 0.03)' : 'var(--surface-1)',
+                  borderColor: isSelected ? 'var(--aura-purple)' : 'var(--border)',
+                  background: isSelected ? 'rgba(157, 110, 255, 0.04)' : 'var(--surface-1)',
                   transform: isSelected ? 'scale(1.02)' : 'scale(1)'
                 }}
               >

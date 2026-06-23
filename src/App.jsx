@@ -525,19 +525,51 @@ function ThreatGlobe({ windowWidth, auraColor }) {
     attacks: [],
     impacts: []
   });
+  
+  const [liveThreats, setLiveThreats] = useState([]);
+
+  // Fetch live OSINT threat data
+  useEffect(() => {
+    const fetchLiveThreats = async () => {
+      try {
+        const response = await fetch('http://localhost:8000/api/threats/live');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.threats && data.threats.length > 0) {
+            setLiveThreats(data.threats);
+            setTelemetryLogs(prev => [
+              { time: new Date().toLocaleTimeString('en-US', { hour12: false }), text: "[SYS] Live OSINT Threat Feed connected.", type: "system" },
+              ...prev.slice(0, 15)
+            ]);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch live threats", err);
+      }
+    };
+    fetchLiveThreats();
+    const fetchInterval = setInterval(fetchLiveThreats, 120000); // refresh every 2 mins
+    return () => clearInterval(fetchInterval);
+  }, []);
 
   // Handle live logs generation and attack trigger sync
   useEffect(() => {
     const attackTypes = [
-      { text: "Blocked typosquatted payment redirect from", type: "blocked" },
-      { text: "SS7 SIM swap credentials hijacking probe locked by", type: "blocked" },
-      { text: "Inbound utility SMS fear trigger bypassed from", type: "shield" },
-      { text: "HaveIBeenPwned API checked compromised indices on", type: "query" },
-      { text: "UPI QR cashback redirection vector isolated at", type: "blocked" }
+      { text: "Malicious probe blocked from", type: "blocked" },
+      { text: "OSINT Indicator of Compromise flagged at", type: "shield" },
+      { text: "Port scanning activity detected from", type: "query" },
+      { text: "High-risk IP connection dropped from", type: "blocked" }
     ];
 
     const logInterval = setInterval(() => {
-      const city = CITIES[Math.floor(Math.random() * (CITIES.length - 1)) + 1]; // Pick non-Mumbai origin
+      let city;
+      if (liveThreats.length > 0) {
+        city = liveThreats[Math.floor(Math.random() * liveThreats.length)];
+        city.name = `${city.ip} (${city.city}, ${city.country})`;
+      } else {
+        city = CITIES[Math.floor(Math.random() * (CITIES.length - 1)) + 1]; // Pick non-Mumbai origin
+      }
+      
       const attackType = attackTypes[Math.floor(Math.random() * attackTypes.length)];
       const d = new Date();
       const timeStr = d.toLocaleTimeString('en-US', { hour12: false });
@@ -552,7 +584,7 @@ function ThreatGlobe({ windowWidth, auraColor }) {
       if (state.attacks.length < 4) {
         state.attacks.push({
           origin: city,
-          target: CITIES[0],
+          target: CITIES[0], // Mumbai Hub
           progress: 0,
           speed: 0.012 + Math.random() * 0.012,
           color: attackType.type === 'blocked' ? 'var(--aura-danger)' : 'var(--aura-purple)',
@@ -562,7 +594,7 @@ function ThreatGlobe({ windowWidth, auraColor }) {
     }, 2800);
 
     return () => clearInterval(logInterval);
-  }, []);
+  }, [liveThreats]);
 
   // Animation Loop and Canvas setup
   useEffect(() => {

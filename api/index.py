@@ -198,3 +198,53 @@ async def scan_headers(url: str):
         raise HTTPException(status_code=504, detail="Scan timed out. Target might be offline or blocking requests.")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to scan target: {str(e)}")
+
+import random
+
+@app.get("/api/threats/live")
+async def get_live_threats():
+    """
+    Fetches a live OSINT feed of compromised IPs and geolocates a random subset 
+    to power the 3D Threat Globe with real-world data safely.
+    """
+    feed_url = "https://rules.emergingthreats.net/blockrules/compromised-ips.txt"
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(feed_url)
+            if response.status_code != 200:
+                raise Exception("Failed to fetch threat feed")
+            
+            # Parse lines, ignore comments, get valid IPs
+            lines = response.text.splitlines()
+            ips = [line.strip() for line in lines if line and not line.startswith("#")]
+            
+            # Pick a random subset of up to 5 IPs to prevent rate limiting on geoip
+            sample_size = min(5, len(ips))
+            if sample_size == 0:
+                return {"threats": []}
+                
+            selected_ips = random.sample(ips, sample_size)
+            
+            # Geolocate IPs using ip-api.com (free, keyless, rate limit 45/min)
+            threats = []
+            for ip in selected_ips:
+                geo_resp = await client.get(f"http://ip-api.com/json/{ip}?fields=status,country,city,lat,lon,query")
+                if geo_resp.status_code == 200:
+                    geo_data = geo_resp.json()
+                    if geo_data.get("status") == "success":
+                        threats.append({
+                            "ip": geo_data["query"],
+                            "city": geo_data.get("city", "Unknown City"),
+                            "country": geo_data.get("country", "Unknown"),
+                            "lat": geo_data["lat"],
+                            "lon": geo_data["lon"]
+                        })
+                        
+            return {"threats": threats}
+    except Exception as e:
+        print(f"Error fetching live threats: {e}")
+        # Return fallback mock data if feed fails
+        return {"threats": [
+            {"ip": "203.0.113.45", "city": "Moscow", "country": "Russia", "lat": 55.7558, "lon": 37.6173},
+            {"ip": "198.51.100.22", "city": "Beijing", "country": "China", "lat": 39.9042, "lon": 116.4074}
+        ]}

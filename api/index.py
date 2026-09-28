@@ -258,8 +258,12 @@ import os
 ml_vectorizer = None
 ml_model = None
 try:
-    ml_vectorizer = joblib.load('models/vectorizer.pkl')
-    ml_model = joblib.load('models/cyber_model.pkl')
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    models_dir = os.path.join(base_dir, 'models')
+    vec_path = os.path.join(models_dir, 'vectorizer.pkl') if os.path.exists(os.path.join(models_dir, 'vectorizer.pkl')) else 'models/vectorizer.pkl'
+    mod_path = os.path.join(models_dir, 'cyber_model.pkl') if os.path.exists(os.path.join(models_dir, 'cyber_model.pkl')) else 'models/cyber_model.pkl'
+    ml_vectorizer = joblib.load(vec_path)
+    ml_model = joblib.load(mod_path)
     print("AI Models successfully loaded!")
 except Exception as e:
     print("Warning: ML models not found or failed to load.", e)

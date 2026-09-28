@@ -1,4 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { 
+  downloadScamAuditPdf,
+  downloadSiteSecurityPdf,
+  generateScamAuditReport, 
+  generateSiteSecurityReport, 
+  triggerReportDownload, 
+  printReportContent 
+} from './reportGenerator';
 
 // Live Verified Cybersecurity Threat Index (Real Threats active in India)
 const ACTIVE_INDIAN_THREATS = [
@@ -1637,6 +1645,36 @@ function ScamDetectorModule({ windowWidth, setRiskScore }) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [activeAccordion, setActiveAccordion] = useState('explanation');
+  const [downloadFeedback, setDownloadFeedback] = useState('');
+
+  const handleDownloadPdf = () => {
+    if (!result) return;
+    try {
+      downloadScamAuditPdf(inputText, result);
+      setDownloadFeedback('✓ PDF DOWNLOADED');
+      setTimeout(() => setDownloadFeedback(''), 2500);
+    } catch (err) {
+      console.error('PDF generation error, falling back to text:', err);
+      handleDownloadReport();
+    }
+  };
+
+  const handleDownloadReport = () => {
+    if (!result) return;
+    const reportText = generateScamAuditReport(inputText, result);
+    const now = new Date();
+    const dateStr = now.toISOString().slice(0, 10);
+    const filename = `CyberShield_Scam_Audit_Report_${dateStr}.txt`;
+    triggerReportDownload(filename, reportText);
+    setDownloadFeedback('✓ REPORT DOWNLOADED');
+    setTimeout(() => setDownloadFeedback(''), 2500);
+  };
+
+  const handlePrintReport = () => {
+    if (!result) return;
+    const reportText = generateScamAuditReport(inputText, result);
+    printReportContent('CyberShield Scam Audit Memorandum', reportText);
+  };
 
   const executeHeuristicAnalysis = async () => {
     const input = inputText.trim();
@@ -1646,11 +1684,20 @@ function ScamDetectorModule({ windowWidth, setRiskScore }) {
     setResult(null);
 
     try {
-      const response = await fetch('http://localhost:8000/api/analyze/scam', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: input })
-      });
+      let response;
+      try {
+        response = await fetch('/api/analyze/scam', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: input })
+        });
+      } catch (e) {
+        response = await fetch('http://localhost:8000/api/analyze/scam', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: input })
+        });
+      }
 
       if (!response.ok) {
         throw new Error('Backend analysis failed');
@@ -1760,6 +1807,88 @@ function ScamDetectorModule({ windowWidth, setRiskScore }) {
       {result && (
         <div className="page-transition-enter-active" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           
+          {/* Executive Report Download Toolbar */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '16px',
+            background: 'linear-gradient(135deg, rgba(157, 110, 255, 0.08) 0%, rgba(13, 13, 22, 0.6) 100%)',
+            border: '1px solid rgba(157, 110, 255, 0.25)',
+            borderRadius: '16px',
+            padding: '16px 20px',
+            boxShadow: '0 8px 30px rgba(0, 0, 0, 0.4)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+              <div style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: '8px',
+                background: 'rgba(157, 110, 255, 0.15)',
+                border: '1px solid rgba(157, 110, 255, 0.35)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--aura-purple)',
+                fontSize: '18px'
+              }}>
+                📄
+              </div>
+              <div>
+                <div className="font-dm-mono" style={{ fontSize: '10px', color: 'var(--aura-purple)', letterSpacing: '0.12em', fontWeight: '700' }}>
+                  AUDIT DOSSIER READY
+                </div>
+                <div className="font-syne" style={{ fontSize: '15px', fontWeight: '700', color: '#ffffff', marginTop: '2px' }}>
+                  Executive Incident & Fraud Assessment
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              <button
+                onClick={handleDownloadPdf}
+                className="cyber-report-btn cyber-report-btn-purple font-syne"
+                title="Download official vector PDF audit report"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="16" y1="13" x2="8" y2="13" />
+                  <line x1="16" y1="17" x2="8" y2="17" />
+                  <polyline points="10 9 9 9 8 9" />
+                </svg>
+                {downloadFeedback || 'DOWNLOAD PDF REPORT'}
+              </button>
+
+              <button
+                onClick={handleDownloadReport}
+                className="cyber-report-btn cyber-report-btn-ghost font-syne"
+                title="Download plain text audit report (.txt)"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                .TXT
+              </button>
+
+              <button
+                onClick={handlePrintReport}
+                className="cyber-report-btn cyber-report-btn-ghost font-syne"
+                title="Print or preview report"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="6 9 6 2 18 2 18 9" />
+                  <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                  <rect x="6" y="14" width="12" height="8" />
+                </svg>
+                PRINT
+              </button>
+            </div>
+          </div>
+
           {/* Verdict Banner */}
           <div 
             style={{
@@ -1933,6 +2062,44 @@ function ScamDetectorModule({ windowWidth, setRiskScore }) {
                 </div>
               );
             })}
+          </div>
+
+          {/* Bottom Download Action Bar */}
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px', marginTop: '8px', flexWrap: 'wrap' }}>
+            <button
+              onClick={handleDownloadPdf}
+              className="cyber-report-btn cyber-report-btn-purple font-syne"
+              style={{ minWidth: '260px', padding: '14px 24px' }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="16" y1="13" x2="8" y2="13" />
+                <line x1="16" y1="17" x2="8" y2="17" />
+                <polyline points="10 9 9 9 8 9" />
+              </svg>
+              {downloadFeedback || 'DOWNLOAD PDF REPORT'}
+            </button>
+            <button
+              onClick={handleDownloadReport}
+              className="cyber-report-btn cyber-report-btn-ghost font-syne"
+              style={{ padding: '14px 18px' }}
+              title="Download text report (.txt)"
+            >
+              .TXT
+            </button>
+            <button
+              onClick={handlePrintReport}
+              className="cyber-report-btn cyber-report-btn-ghost font-syne"
+              style={{ padding: '14px 20px' }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="6 9 6 2 18 2 18 9" />
+                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                <rect x="6" y="14" width="12" height="8" />
+              </svg>
+              PRINT
+            </button>
           </div>
 
         </div>
@@ -2945,6 +3112,43 @@ function SiteScannerModule({ windowWidth, setRiskScore, setTriggerLaser }) {
   const [loading, setLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('Initializing scan...');
   const [scanResult, setScanResult] = useState(null);
+  const [downloadFeedback, setDownloadFeedback] = useState('');
+
+  const handleDownloadPdf = () => {
+    if (!scanResult) return;
+    try {
+      downloadSiteSecurityPdf(inputUrl, scanResult);
+      setDownloadFeedback('✓ PDF DOWNLOADED');
+      setTimeout(() => setDownloadFeedback(''), 2500);
+    } catch (err) {
+      console.error('PDF generation error, falling back to text:', err);
+      handleDownloadReport();
+    }
+  };
+
+  const handleDownloadReport = () => {
+    if (!scanResult) return;
+    const reportText = generateSiteSecurityReport(inputUrl, scanResult);
+    let cleanDomain = 'site';
+    try {
+      const parsed = new URL(scanResult.url || inputUrl);
+      cleanDomain = parsed.hostname.replace(/[^a-zA-Z0-9.-]/g, '_');
+    } catch (e) {
+      cleanDomain = (inputUrl || 'target').replace(/[^a-zA-Z0-9.-]/g, '_');
+    }
+    const now = new Date();
+    const dateStr = now.toISOString().slice(0, 10);
+    const filename = `CyberShield_Site_Security_Report_${cleanDomain}_${dateStr}.txt`;
+    triggerReportDownload(filename, reportText);
+    setDownloadFeedback('✓ REPORT DOWNLOADED');
+    setTimeout(() => setDownloadFeedback(''), 2500);
+  };
+
+  const handlePrintReport = () => {
+    if (!scanResult) return;
+    const reportText = generateSiteSecurityReport(inputUrl, scanResult);
+    printReportContent(`CyberShield Security Report - ${scanResult.url || inputUrl}`, reportText);
+  };
   
   // API Key removed for security
   const performScan = async () => {
@@ -3071,6 +3275,88 @@ function SiteScannerModule({ windowWidth, setRiskScore, setTriggerLaser }) {
       {scanResult && (
         <div className="page-transition-enter-active" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           
+          {/* Executive Report Download Toolbar */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '16px',
+            background: 'linear-gradient(135deg, rgba(0, 229, 160, 0.08) 0%, rgba(13, 13, 22, 0.6) 100%)',
+            border: '1px solid rgba(0, 229, 160, 0.25)',
+            borderRadius: '16px',
+            padding: '16px 20px',
+            boxShadow: '0 8px 30px rgba(0, 0, 0, 0.4)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+              <div style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: '8px',
+                background: 'rgba(0, 229, 160, 0.15)',
+                border: '1px solid rgba(0, 229, 160, 0.35)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--aura-safe)',
+                fontSize: '18px'
+              }}>
+                🛡️
+              </div>
+              <div>
+                <div className="font-dm-mono" style={{ fontSize: '10px', color: 'var(--aura-safe)', letterSpacing: '0.12em', fontWeight: '700' }}>
+                  PERIMETER AUDIT COMPLETE
+                </div>
+                <div className="font-syne" style={{ fontSize: '15px', fontWeight: '700', color: '#ffffff', marginTop: '2px' }}>
+                  Executive Security & Remediation Report
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              <button
+                onClick={handleDownloadPdf}
+                className="cyber-report-btn cyber-report-btn-safe font-syne"
+                title="Download official vector PDF security audit report"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="16" y1="13" x2="8" y2="13" />
+                  <line x1="16" y1="17" x2="8" y2="17" />
+                  <polyline points="10 9 9 9 8 9" />
+                </svg>
+                {downloadFeedback || 'DOWNLOAD PDF REPORT'}
+              </button>
+
+              <button
+                onClick={handleDownloadReport}
+                className="cyber-report-btn cyber-report-btn-ghost font-syne"
+                title="Download plain text security report (.txt)"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                .TXT
+              </button>
+
+              <button
+                onClick={handlePrintReport}
+                className="cyber-report-btn cyber-report-btn-ghost font-syne"
+                title="Print or preview report"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="6 9 6 2 18 2 18 9" />
+                  <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                  <rect x="6" y="14" width="12" height="8" />
+                </svg>
+                PRINT
+              </button>
+            </div>
+          </div>
+
           <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
             {/* Grade Card */}
             <div className="glass-card" style={{ padding: '24px', flex: '1', minWidth: '200px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
@@ -3129,6 +3415,44 @@ function SiteScannerModule({ windowWidth, setRiskScore, setTriggerLaser }) {
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* Bottom Download Action Bar */}
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px', marginTop: '8px', flexWrap: 'wrap' }}>
+            <button
+              onClick={handleDownloadPdf}
+              className="cyber-report-btn cyber-report-btn-safe font-syne"
+              style={{ minWidth: '260px', padding: '14px 24px' }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="16" y1="13" x2="8" y2="13" />
+                <line x1="16" y1="17" x2="8" y2="17" />
+                <polyline points="10 9 9 9 8 9" />
+              </svg>
+              {downloadFeedback || 'DOWNLOAD PDF REPORT'}
+            </button>
+            <button
+              onClick={handleDownloadReport}
+              className="cyber-report-btn cyber-report-btn-ghost font-syne"
+              style={{ padding: '14px 18px' }}
+              title="Download text report (.txt)"
+            >
+              .TXT
+            </button>
+            <button
+              onClick={handlePrintReport}
+              className="cyber-report-btn cyber-report-btn-ghost font-syne"
+              style={{ padding: '14px 20px' }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="6 9 6 2 18 2 18 9" />
+                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                <rect x="6" y="14" width="12" height="8" />
+              </svg>
+              PRINT
+            </button>
           </div>
 
         </div>

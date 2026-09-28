@@ -302,4 +302,77 @@ body {
   pointer-events: none;
 }
 
+/* Executive Cyber Report Action Buttons */
+.cyber-report-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  outline: none;
+  border: 1px solid var(--border-active);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.cyber-report-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+}
+
+.cyber-report-btn:active {
+  transform: translateY(0);
+}
+
+.cyber-report-btn-purple {
+  background: linear-gradient(135deg, rgba(157, 110, 255, 0.2) 0%, rgba(125, 68, 255, 0.35) 100%);
+  border: 1px solid rgba(157, 110, 255, 0.5);
+  color: #ffffff;
+  box-shadow: 0 4px 20px rgba(157, 110, 255, 0.25);
+}
+
+.cyber-report-btn-purple:hover {
+  background: linear-gradient(135deg, rgba(157, 110, 255, 0.35) 0%, rgba(125, 68, 255, 0.55) 100%);
+  border-color: rgba(157, 110, 255, 0.85);
+  box-shadow: 0 6px 28px rgba(157, 110, 255, 0.45);
+}
+
+.cyber-report-btn-safe {
+  background: linear-gradient(135deg, rgba(0, 229, 160, 0.15) 0%, rgba(0, 180, 130, 0.28) 100%);
+  border: 1px solid rgba(0, 229, 160, 0.5);
+  color: #00e5a0;
+  box-shadow: 0 4px 20px rgba(0, 229, 160, 0.2);
+}
+
+.cyber-report-btn-safe:hover {
+  background: linear-gradient(135deg, rgba(0, 229, 160, 0.28) 0%, rgba(0, 180, 130, 0.45) 100%);
+  border-color: rgba(0, 229, 160, 0.9);
+  color: #ffffff;
+  box-shadow: 0 6px 28px rgba(0, 229, 160, 0.4);
+}
+
+.cyber-report-btn-ghost {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
+}
+
+.cyber-report-btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+}
+
+
 

@@ -453,3 +453,92 @@ body {
 .cyber-attack-launch-btn:hover::before {
   left: 100%;
 }
+
+
+/* =========================================================================
+   HOLOGRAPHIC SCANNER & ADVANCED CYBER HUD ANIMATIONS
+   ========================================================================= */
+
+@keyframes radar-counter-sweep {
+  0% { transform: rotate(360deg); }
+  100% { transform: rotate(0deg); }
+}
+
+@keyframes laser-sweep-vertical {
+  0% { top: 4%; opacity: 0.2; }
+  50% { top: 92%; opacity: 0.95; filter: drop-shadow(0 0 12px #00f2fe); }
+  100% { top: 4%; opacity: 0.2; }
+}
+
+@keyframes reticle-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.06); opacity: 1; filter: drop-shadow(0 0 8px rgba(0, 229, 160, 0.6)); }
+}
+
+@keyframes progress-stripes {
+  0% { background-position: 0 0; }
+  100% { background-position: 40px 0; }
+}
+
+@keyframes telemetry-blink {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+@keyframes scan-matrix-pan {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 100% 100%; }
+}
+
+/* Quick-Test Interactive Scenario Pills */
+.quick-test-pill {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 11px;
+  font-family: 'DM Mono', monospace;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.quick-test-pill:hover {
+  background: rgba(0, 242, 254, 0.08);
+  border-color: rgba(0, 242, 254, 0.45);
+  color: #00f2fe;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 242, 254, 0.15);
+}
+
+.quick-test-pill:active {
+  transform: translateY(0);
+}
+
+.quick-test-pill.active {
+  background: rgba(0, 229, 160, 0.12);
+  border-color: var(--aura-safe);
+  color: #fff;
+  box-shadow: 0 0 12px rgba(0, 229, 160, 0.25);
+}
+
+/* Interactive Accordion & Cards */
+.cyber-card-interactive {
+  background: rgba(13, 13, 22, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cyber-card-interactive:hover {
+  border-color: rgba(0, 229, 160, 0.35);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  transform: translateY(-2px);
+}

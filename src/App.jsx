@@ -7,7 +7,14 @@ import {
   Cpu,
   ExternalLink,
   ChevronRight,
-  Terminal, 
+  Terminal,
+  Scan,
+  Crosshair,
+  Radar,
+  RefreshCw,
+  Play,
+  Copy,
+  ArrowRight, 
 
   Search, 
 
@@ -1274,208 +1281,279 @@ export default function App() {
 
 
 /* =========================================================================
-
-   UNIVERSAL COMPONENT: Heuristic Scanning Rain Overlay
-
+   UNIVERSAL COMPONENT: Advanced Holographic Cyber Threat Scanner
    ========================================================================= */
 
 function MatrixLoader({ message }) {
-
-  const [currentText, setCurrentText] = useState(message || "Analyzing system files...");
-
-
+  const [currentText, setCurrentText] = useState(message || "Analyzing system telemetry...");
+  const [progress, setProgress] = useState(14);
+  const [telemetryAddress, setTelemetryAddress] = useState('0x7FFE_4A90');
 
   useEffect(() => {
-
-    const messages = [
-
-      "Hashing input structures...",
-
-      "Analyzing network signatures...",
-
-      "Cross-referencing intelligence...",
-
-      "Verifying security protocols...",
-
-      "Compiling heuristic diagnostics..."
-
+    const diagnosticPhases = [
+      message || "Hashing payload signatures and evaluating byte entropy...",
+      "Executing deep heuristic homoglyph matrix audit...",
+      "Querying global zero-day CVE & threat repository...",
+      "Analyzing TLS cipher suite and perimeter protocol handshake...",
+      "Compiling cryptographic defense telemetry & executive dossier..."
     ];
-
     let msgIndex = 0;
-
     const interval = setInterval(() => {
+      msgIndex = (msgIndex + 1) % diagnosticPhases.length;
+      setCurrentText(diagnosticPhases[msgIndex]);
+    }, 1300);
 
-      msgIndex = (msgIndex + 1) % messages.length;
+    const progressInterval = setInterval(() => {
+      setProgress(prev => {
+        if (prev >= 95) return 95;
+        const jump = Math.floor(Math.random() * 9) + 4;
+        return Math.min(prev + jump, 95);
+      });
+      const hex = '0x' + Math.floor(Math.random() * 0xFFFFFF).toString(16).toUpperCase().padStart(6, '0');
+      setTelemetryAddress(hex);
+    }, 250);
 
-      setCurrentText(messages[msgIndex]);
-
-    }, 1500);
-
-
-
-    return () => clearInterval(interval);
-
-  }, []);
-
-
+    return () => {
+      clearInterval(interval);
+      clearInterval(progressInterval);
+    };
+  }, [message]);
 
   return (
-
     <div style={{
-
       position: 'absolute',
-
       top: 0,
-
       left: 0,
-
       right: 0,
-
       bottom: 0,
-
-      background: 'rgba(5, 5, 8, 0.90)',
-
-      backdropFilter: 'blur(8px)',
-
+      background: 'radial-gradient(ellipse at center, rgba(10, 16, 28, 0.94) 0%, rgba(4, 6, 12, 0.98) 100%)',
+      backdropFilter: 'blur(14px)',
+      WebkitBackdropFilter: 'blur(14px)',
       display: 'flex',
-
       flexDirection: 'column',
-
       alignItems: 'center',
-
       justifyContent: 'center',
-
       borderRadius: 'inherit',
-
       zIndex: 100,
-
-      overflow: 'hidden'
-
+      overflow: 'hidden',
+      padding: '28px'
     }}>
-
-      {/* Sleek Pulse Animation */}
-
+      {/* Background Matrix Grid Overlay */}
       <div style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundImage: 'linear-gradient(rgba(0, 242, 254, 0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 242, 254, 0.04) 1px, transparent 1px)',
+        backgroundSize: '28px 28px',
+        pointerEvents: 'none',
+        opacity: 0.65
+      }} />
 
-        position: 'relative',
-
-        width: '80px',
-
-        height: '80px',
-
-        marginBottom: '32px',
-
-        display: 'flex',
-
-        alignItems: 'center',
-
-        justifyContent: 'center'
-
-      }}>
-
-        {/* Outer expanding ring */}
-
-        <div style={{
-
-          position: 'absolute',
-
-          width: '100%',
-
-          height: '100%',
-
-          border: '2px solid var(--aura-safe)',
-
-          borderRadius: '50%',
-
-          animation: 'pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite'
-
-        }} />
-
-        
-
-        {/* Inner delayed ring */}
-
-        <div style={{
-
-          position: 'absolute',
-
-          width: '60%',
-
-          height: '60%',
-
-          border: '2px solid var(--aura-info)',
-
-          borderRadius: '50%',
-
-          animation: 'pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite',
-
-          animationDelay: '0.6s'
-
-        }} />
-
-
-
-        {/* Center glowing core */}
-
-        <div style={{
-
-          position: 'absolute',
-
-          width: '16px',
-
-          height: '16px',
-
-          background: 'var(--aura-safe)',
-
-          borderRadius: '50%',
-
-          boxShadow: '0 0 20px var(--aura-safe)',
-
-          animation: 'glow-breathe 2s ease-in-out infinite'
-
-        }} />
-
-      </div>
-
-
-
-      {/* Loading Text */}
-
+      {/* Top Status Pill */}
       <div 
-
-        className="font-dm-mono" 
-
-        style={{ 
-
-          fontSize: '13px', 
-
-          color: 'var(--text-secondary)', 
-
-          letterSpacing: '0.15em', 
-
-          textAlign: 'center', 
-
-          zIndex: 10,
-
-          padding: '0 16px',
-
-          textShadow: '0 0 10px rgba(0, 0, 0, 0.5)'
-
+        className="font-dm-mono"
+        style={{
+          background: 'rgba(0, 242, 254, 0.08)',
+          border: '1px solid rgba(0, 242, 254, 0.35)',
+          color: '#00f2fe',
+          padding: '6px 14px',
+          borderRadius: '24px',
+          fontSize: '11px',
+          letterSpacing: '0.14em',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '8px',
+          marginBottom: '26px',
+          boxShadow: '0 0 20px rgba(0, 242, 254, 0.2)',
+          zIndex: 10
         }}
-
       >
-
-        {currentText.toUpperCase()}
-
+        <span style={{
+          width: '7px',
+          height: '7px',
+          borderRadius: '50%',
+          background: '#00e5a0',
+          boxShadow: '0 0 10px #00e5a0',
+          animation: 'telemetry-blink 1.2s infinite'
+        }} />
+        <span>CYBER RECONNAISSANCE SCANNER ACTIVE</span>
       </div>
 
+      {/* Holographic Radar Scanner Rig */}
+      <div style={{
+        position: 'relative',
+        width: '140px',
+        height: '140px',
+        marginBottom: '24px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 10
+      }}>
+        {/* Outer segmented radar ring */}
+        <div style={{
+          position: 'absolute',
+          width: '100%',
+          height: '100%',
+          border: '1px dashed rgba(0, 242, 254, 0.35)',
+          borderRadius: '50%',
+          animation: 'radar-sweep 8s linear infinite'
+        }} />
+
+        {/* Counter-rotating dashed track */}
+        <div style={{
+          position: 'absolute',
+          width: '82%',
+          height: '82%',
+          border: '2px solid transparent',
+          borderTopColor: 'var(--aura-safe)',
+          borderBottomColor: '#00f2fe',
+          borderRadius: '50%',
+          animation: 'radar-counter-sweep 4s linear infinite',
+          filter: 'drop-shadow(0 0 8px rgba(0, 229, 160, 0.5))'
+        }} />
+
+        {/* Radar Sweeping Gradient Cone */}
+        <div style={{
+          position: 'absolute',
+          width: '80%',
+          height: '80%',
+          borderRadius: '50%',
+          background: 'conic-gradient(from 0deg, rgba(0, 242, 254, 0.35) 0deg, rgba(0, 229, 160, 0.15) 60deg, transparent 90deg, transparent 360deg)',
+          animation: 'radar-sweep 2.2s linear infinite'
+        }} />
+
+        {/* Crosshair Brackets */}
+        <div style={{
+          position: 'absolute',
+          width: '54%',
+          height: '54%',
+          border: '1px solid rgba(255, 255, 255, 0.15)',
+          borderRadius: '6px',
+          animation: 'reticle-pulse 2s ease-in-out infinite'
+        }} />
+
+        {/* Vertical Sweeping Laser Beam */}
+        <div style={{
+          position: 'absolute',
+          width: '100%',
+          height: '2px',
+          background: 'linear-gradient(90deg, transparent 0%, #00f2fe 50%, transparent 100%)',
+          boxShadow: '0 0 12px #00f2fe',
+          animation: 'laser-sweep-vertical 2s ease-in-out infinite'
+        }} />
+
+        {/* Core Quantum Target Reticle */}
+        <div style={{
+          position: 'relative',
+          width: '42px',
+          height: '42px',
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(0, 229, 160, 0.3) 0%, rgba(0, 0, 0, 0.8) 100%)',
+          border: '1px solid var(--aura-safe)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          boxShadow: '0 0 20px rgba(0, 229, 160, 0.5)'
+        }}>
+          <Shield size={20} color="var(--aura-safe)" />
+        </div>
+
+        {/* 4 Cardinal Reticle Ticks */}
+        <div style={{ position: 'absolute', top: '-6px', width: '2px', height: '8px', background: '#00f2fe' }} />
+        <div style={{ position: 'absolute', bottom: '-6px', width: '2px', height: '8px', background: '#00f2fe' }} />
+        <div style={{ position: 'absolute', left: '-6px', width: '8px', height: '2px', background: '#00f2fe' }} />
+        <div style={{ position: 'absolute', right: '-6px', width: '8px', height: '2px', background: '#00f2fe' }} />
+      </div>
+
+      {/* Dynamic Status Text */}
+      <div 
+        className="font-dm-mono" 
+        style={{ 
+          fontSize: '13px', 
+          fontWeight: '600',
+          color: '#ffffff', 
+          letterSpacing: '0.12em', 
+          textAlign: 'center', 
+          zIndex: 10,
+          maxWidth: '520px',
+          lineHeight: '1.5',
+          textShadow: '0 0 12px rgba(0, 242, 254, 0.4)',
+          marginBottom: '16px',
+          padding: '0 16px'
+        }}
+      >
+        {currentText.toUpperCase()}
+      </div>
+
+      {/* High-Tech Segmented Progress Bar */}
+      <div style={{
+        width: '100%',
+        maxWidth: '380px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px',
+        zIndex: 10,
+        marginBottom: '12px'
+      }}>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          fontFamily: "'DM Mono', monospace",
+          fontSize: '11px',
+          color: 'var(--text-secondary)'
+        }}>
+          <span>SCAN COMPLETION</span>
+          <span style={{ color: '#00f2fe', fontWeight: '700' }}>{progress}%</span>
+        </div>
+
+        <div style={{
+          width: '100%',
+          height: '6px',
+          background: 'rgba(255, 255, 255, 0.06)',
+          borderRadius: '4px',
+          overflow: 'hidden',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          position: 'relative'
+        }}>
+          <div style={{
+            width: `${progress}%`,
+            height: '100%',
+            background: 'linear-gradient(90deg, #00e5a0 0%, #00f2fe 50%, #7d44ff 100%)',
+            boxShadow: '0 0 14px rgba(0, 242, 254, 0.6)',
+            borderRadius: '4px',
+            transition: 'width 0.25s ease-out'
+          }} />
+        </div>
+      </div>
+
+      {/* Telemetry Micro-Data Strip */}
+      <div 
+        className="font-dm-mono"
+        style={{
+          fontSize: '10px',
+          color: 'var(--text-muted)',
+          letterSpacing: '0.08em',
+          textAlign: 'center',
+          zIndex: 10,
+          display: 'flex',
+          gap: '12px',
+          flexWrap: 'wrap',
+          justifyContent: 'center'
+        }}
+      >
+        <span>PTR: <span style={{ color: 'var(--aura-safe)' }}>{telemetryAddress}</span></span>
+        <span>•</span>
+        <span>LATENCY: <span style={{ color: '#00f2fe' }}>12ms</span></span>
+        <span>•</span>
+        <span>ENGINE: <span style={{ color: '#fff' }}>V9-NEURAL</span></span>
+      </div>
     </div>
-
   );
-
 }
-
-
 
 /* =========================================================================
 
@@ -2499,11 +2577,14 @@ function DashboardModule({ windowWidth, auraColor, riskScore, setRiskScore }) {
 
 
 
-  const handleBreachSearch = async (e) => {
+  const handleBreachSearch = async (e, overrideTarget, overrideMode) => {
 
     e.preventDefault();
 
-    const cleanTarget = searchTarget.trim();
+    const cleanTarget = (overrideTarget !== undefined ? overrideTarget : searchTarget).trim();
+    const effectiveMode = overrideMode || auditMode;
+    if (overrideTarget !== undefined) setSearchTarget(overrideTarget);
+    if (overrideMode) setAuditMode(overrideMode);
 
     if (!cleanTarget) return;
 
@@ -2834,6 +2915,27 @@ function DashboardModule({ windowWidth, auraColor, riskScore, setRiskScore }) {
             </div>
 
 
+
+            {/* 1-Click Quick-Audit Sample Presets */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '14px' }}>
+              <span className="font-dm-mono" style={{ fontSize: '11px', color: 'var(--text-muted)', letterSpacing: '0.08em' }}>QUICK PRESETS:</span>
+              {[
+                { label: 'elon@tesla.com', mode: 'email', val: 'elon@tesla.com' },
+                { label: 'test@gmail.com', mode: 'email', val: 'test@gmail.com' },
+                { label: '+91 98765 43210', mode: 'phone', val: '+91 98765 43210' },
+                { label: 'P@ssw0rd123', mode: 'password', val: 'P@ssw0rd123' },
+              ].map((pill, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  className="quick-test-pill"
+                  onClick={() => handleBreachSearch(null, pill.val, pill.mode)}
+                >
+                  <Zap size={11} color="var(--aura-safe)" />
+                  {pill.label}
+                </button>
+              ))}
+            </div>
 
             <form onSubmit={handleBreachSearch} style={{ display: 'flex', flexDirection: windowWidth > 640 ? 'row' : 'column', gap: '10px', marginBottom: '20px' }}>
 
@@ -3471,9 +3573,10 @@ function ScamDetectorModule({ windowWidth, setRiskScore }) {
 
 
 
-  const executeHeuristicAnalysis = async () => {
+  const executeHeuristicAnalysis = async (overrideText) => {
 
-    const input = inputText.trim();
+    const input = (overrideText !== undefined ? overrideText : inputText).trim();
+    if (overrideText !== undefined) setInputText(overrideText);
 
     if (!input) return;
 
@@ -3635,6 +3738,50 @@ function ScamDetectorModule({ windowWidth, setRiskScore }) {
 
           
 
+          {/* 1-Click Realistic Attack Scenarios for Viva & Demo */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '4px' }}>
+            <div className="font-dm-mono" style={{ fontSize: '11px', color: 'var(--text-muted)', letterSpacing: '0.08em' }}>1-CLICK ATTACK SCENARIOS (FOR DEMO):</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              {[
+                {
+                  title: '⚡ Electricity Disconnection SMS',
+                  badge: 'CRITICAL',
+                  text: 'Dear Consumer, Your electricity power will be disconnected tonight at 9:30 PM because your previous month bill was not updated. Please immediately contact our electricity officer at 9876543210 or click http://bihar-bijli-update.xyz/pay to avoid disconnection.'
+                },
+                {
+                  title: '🏦 SBI KYC Suspension Link',
+                  badge: 'HIGH RISK',
+                  text: 'URGENT: Your SBI YONO banking account is blocked due to missing PAN Card KYC verification. Update your KYC within 24 hours to resume transactions: https://sbi-kyc-verify.online-portal.in'
+                },
+                {
+                  title: '🎁 Telegram Crypto AirDrop ($8,250)',
+                  badge: 'SUSPICIOUS',
+                  text: 'Congratulations! You won 2.5 ETH ($8,250) in the Binance Community Giveaway. Claim your allocation before timer runs out at https://binance-airdrop-bonus2026.com/claim?id=99281'
+                },
+                {
+                  title: '✅ Genuine Project Review Invite',
+                  badge: 'SAFE',
+                  text: 'Hi Jainam, please review the finalized project report and architecture slides for tomorrow viva examination on Google Drive: https://docs.google.com/presentation/d/1A2B3C'
+                }
+              ].map((scen, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  className="quick-test-pill"
+                  onClick={() => executeHeuristicAnalysis(scen.text)}
+                >
+                  <span style={{
+                    width: '6px',
+                    height: '6px',
+                    borderRadius: '50%',
+                    background: scen.badge === 'SAFE' ? '#00e5a0' : scen.badge === 'SUSPICIOUS' ? '#f5c518' : '#ff3d5a',
+                    boxShadow: '0 0 6px ' + (scen.badge === 'SAFE' ? '#00e5a0' : scen.badge === 'SUSPICIOUS' ? '#f5c518' : '#ff3d5a')
+                  }} />
+                  {scen.title}
+                </button>
+              ))}
+            </div>
+          </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
 
             <label className="font-dm-mono" style={{ fontSize: '11px', color: 'var(--text-secondary)', letterSpacing: '0.12em' }}>SUSPICIOUS URL OR SMS COPY</label>
@@ -4541,10 +4688,32 @@ function FootprintModule({ windowWidth, setRiskScore, setTriggerLaser }) {
 
 
 
-        <div className="font-dm-mono" style={{ fontSize: '11px', color: 'var(--text-secondary)', letterSpacing: '0.1em', marginBottom: '16px' }}>
-
-          CHECK THE PROTOCOLS CURRENTLY INSTALLED IN YOUR SYSTEM
-
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
+          <div className="font-dm-mono" style={{ fontSize: '11px', color: 'var(--text-secondary)', letterSpacing: '0.1em' }}>
+            CHECK THE PROTOCOLS CURRENTLY INSTALLED IN YOUR SYSTEM
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              type="button"
+              className="quick-test-pill active"
+              onClick={() => {
+                const all = {};
+                activeCriteria.forEach(c => all[c.id] = true);
+                setCheckedPolicies(all);
+              }}
+            >
+              <CheckCircle2 size={12} color="var(--aura-safe)" />
+              SELECT ALL BASELINES
+            </button>
+            <button
+              type="button"
+              className="quick-test-pill"
+              onClick={() => setCheckedPolicies({})}
+            >
+              <X size={12} color="var(--text-muted)" />
+              RESET
+            </button>
+          </div>
         </div>
 
 
@@ -5405,6 +5574,55 @@ function AttackSimulatorModule({ windowWidth }) {
 
             {/* Timeline */}
 
+        {/* DYNAMIC VISUAL ATTACK TOPOLOGY */}
+        <div style={{
+          background: 'rgba(5, 7, 14, 0.75)',
+          border: '1px solid rgba(0, 242, 254, 0.25)',
+          borderRadius: '12px',
+          padding: '16px 20px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '12px',
+          marginBottom: '20px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(255, 61, 90, 0.15)', border: '1px solid var(--aura-danger)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <ShieldAlert size={16} color="var(--aura-danger)" />
+            </div>
+            <div>
+              <div className="font-dm-mono" style={{ fontSize: '10px', color: 'var(--aura-danger)' }}>THREAT VECTOR</div>
+              <div className="font-syne" style={{ fontSize: '13px', fontWeight: '700', color: '#fff' }}>EXTERNAL ATTACKER</div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-muted)' }}>
+            <span style={{ width: '20px', height: '2px', background: 'linear-gradient(90deg, var(--aura-danger), #00f2fe)' }} />
+            <ChevronRight size={14} color="#00f2fe" />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(0, 242, 254, 0.12)', border: '1px solid #00f2fe', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Shield size={16} color="#00f2fe" />
+            </div>
+            <div>
+              <div className="font-dm-mono" style={{ fontSize: '10px', color: '#00f2fe' }}>EDGE DEFENSE</div>
+              <div className="font-syne" style={{ fontSize: '13px', fontWeight: '700', color: '#fff' }}>CLOUDFLARE WAF</div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-muted)' }}>
+            <span style={{ width: '20px', height: '2px', background: 'linear-gradient(90deg, #00f2fe, var(--aura-safe))' }} />
+            <ChevronRight size={14} color="var(--aura-safe)" />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(0, 229, 160, 0.12)', border: '1px solid var(--aura-safe)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Lock size={16} color="var(--aura-safe)" />
+            </div>
+            <div>
+              <div className="font-dm-mono" style={{ fontSize: '10px', color: 'var(--aura-safe)' }}>CONTAINER SANDBOX</div>
+              <div className="font-syne" style={{ fontSize: '13px', fontWeight: '700', color: '#fff' }}>DOCKER ISOLATION</div>
+            </div>
+          </div>
+        </div>
             <div>
 
               <div className="font-dm-mono" style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '20px' }}>CHRONOLOGICAL LAB LOGS</div>
@@ -5805,9 +6023,13 @@ function FamilySafetyModule({ windowWidth }) {
 
 
 
-  const handleAuditRequest = () => {
+  const handleAuditRequest = (overrideDesc, overridePersona) => {
 
-    if (!description.trim()) return;
+    const desc = (overrideDesc !== undefined ? overrideDesc : description).trim();
+    const persona = overridePersona || selectedPersona;
+    if (!desc) return;
+    if (overrideDesc !== undefined) setDescription(overrideDesc);
+    if (overridePersona) setSelectedPersona(overridePersona);
 
 
 
@@ -6600,6 +6822,29 @@ function SiteScannerModule({ windowWidth, setRiskScore, setTriggerLaser }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+
+            {/* Target Presets for Viva Demonstration */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '8px' }}>
+              <div className="font-dm-mono" style={{ fontSize: '11px', color: 'var(--text-muted)', letterSpacing: '0.08em' }}>SAMPLE TARGET PRESETS:</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                {[
+                  { label: 'google.com (Hardened)', url: 'google.com' },
+                  { label: 'github.com (Strict HSTS)', url: 'github.com' },
+                  { label: 'testphp.vulnweb.com (Vulnerable Web Lab)', url: 'testphp.vulnweb.com' },
+                  { label: 'paypal-security.fake-domain.xyz', url: 'paypal-security.fake-domain.xyz' }
+                ].map((preset, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    className="quick-test-pill"
+                    onClick={() => performScan(preset.url)}
+                  >
+                    <Globe size={11} color="#00f2fe" />
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             <label className="font-dm-mono" style={{ fontSize: '11px', color: 'var(--text-secondary)', letterSpacing: '0.12em' }}>TARGET URL TO SCAN</label>
 

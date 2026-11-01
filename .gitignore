@@ -30,3 +30,7 @@ cache/
 __pycache__/
 *.pyc
 venv/
+
+# Viva examination dossiers (keep local only)
+*VIVA_GUIDE*
+CYBERSHIELD_CODEXA_VIVA_GUIDE.pdf

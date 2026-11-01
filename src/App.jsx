@@ -5915,33 +5915,29 @@ function FamilySafetyModule({ windowWidth }) {
 
 
   const handleAuditRequest = (overrideDesc, overridePersona) => {
-    const descVal = typeof overrideDesc === 'string' ? overrideDesc : description;
-    const desc = (descVal || '').trim();
-    const persona = typeof overridePersona === 'string' ? overridePersona : selectedPersona;
-    if (!desc) return;
-    if (typeof overrideDesc === 'string') setDescription(overrideDesc);
-    if (typeof overridePersona === 'string') setSelectedPersona(overridePersona);
-    if (overrideDesc !== undefined) setDescription(overrideDesc);
-    if (overridePersona) setSelectedPersona(overridePersona);
+    // When invoked by button onClick, overrideDesc is the React click event object
+    const isEvent = overrideDesc && typeof overrideDesc === 'object' && ('preventDefault' in overrideDesc || 'nativeEvent' in overrideDesc);
+    const textVal = isEvent ? description : (typeof overrideDesc === 'string' ? overrideDesc : description);
+    
+    const targetPersona = typeof overridePersona === 'string' ? overridePersona : selectedPersona;
+    
+    const DEFAULT_SCENARIOS = {
+      Elder: "Someone called claiming my electricity bill is overdue and power will be cut in 30 minutes unless I download an APK app to pay.",
+      Adult: "A buyer on OLX claiming to be an army officer agreed to my price and sent a Google Pay QR code asking me to scan it to receive the advance.",
+      Teen: "Received an international WhatsApp message offering Rs 5,000 daily to like YouTube videos, but now demanding money on Telegram to release payouts."
+    };
 
+    const finalDesc = (textVal || '').trim() || DEFAULT_SCENARIOS[targetPersona] || DEFAULT_SCENARIOS.Elder;
 
-
+    setDescription(finalDesc);
+    setSelectedPersona(targetPersona);
     setLoading(true);
-
     setAdvice(null);
 
-
-
-    // Latency
-
     setTimeout(() => {
-
-      setAdvice(MOCK_SAFETY_DIRECTORY[selectedPersona]);
-
+      setAdvice(MOCK_SAFETY_DIRECTORY[targetPersona] || MOCK_SAFETY_DIRECTORY.Elder);
       setLoading(false);
-
-    }, 1600);
-
+    }, 1000);
   };
 
 
@@ -6090,6 +6086,28 @@ function FamilySafetyModule({ windowWidth }) {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
+          {/* Preset Incident Pills for Instant Viva Demo */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '4px' }}>
+            <div className="font-dm-mono" style={{ fontSize: '11px', color: 'var(--text-muted)', letterSpacing: '0.08em' }}>SAMPLE INCIDENT PRESETS:</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              {[
+                { label: 'Elder: Electricity Disconnect Threat', persona: 'Elder', text: 'Someone called saying my electricity bill is overdue and my power will be cut in 30 minutes unless I download a fast support app to pay.' },
+                { label: 'Adult: Army Officer Advance QR Scam', persona: 'Adult', text: 'A tenant claiming to be an army officer agreed to rent my flat and sent a QR code telling me to scan it on Google Pay to receive the advance deposit.' },
+                { label: 'Teen: Telegram Part-Time Like Scheme', persona: 'Teen', text: 'Received a WhatsApp message from an international number (+62) offering Rs 5,000/day to like YouTube videos, now demanding money on Telegram to withdraw earnings.' }
+              ].map((preset, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  className="quick-test-pill"
+                  onClick={() => handleAuditRequest(preset.text, preset.persona)}
+                >
+                  <ShieldCheck size={11} color="var(--aura-purple)" />
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <label className="font-dm-mono" style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>DESCRIBE WHAT OCCURRED IN SIMPLE TERMS</label>
 
           <textarea
@@ -6131,39 +6149,27 @@ function FamilySafetyModule({ windowWidth }) {
           />
 
           <button
-
-            onClick={handleAuditRequest}
-
-            disabled={!description.trim() || loading}
-
+            type="button"
+            onClick={() => handleAuditRequest()}
+            disabled={loading}
             className="font-syne"
-
             style={{
-
-              background: description.trim() ? 'var(--aura-purple)' : 'var(--surface-3)',
-
-              color: description.trim() ? '#fff' : 'var(--text-muted)',
-
+              background: 'var(--aura-purple)',
+              color: '#fff',
               border: 'none',
-
               padding: '14px 28px',
-
               borderRadius: '8px',
-
               fontSize: '15px',
-
               fontWeight: '600',
-
-              cursor: description.trim() ? 'pointer' : 'default',
-
-              boxShadow: description.trim() ? '0 4px 20px rgba(157, 110, 255, 0.2)' : 'none'
-
+              cursor: loading ? 'default' : 'pointer',
+              boxShadow: '0 4px 20px rgba(157, 110, 255, 0.25)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px'
             }}
-
           >
-
+            <ShieldCheck size={16} color="#fff" />
             COMPILE SAFETY INSTRUCTIONS
-
           </button>
 
         </div>

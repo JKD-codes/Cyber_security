@@ -3,7 +3,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
 
   BarChart3,
-  Activity, 
+  Activity,
+  Cpu,
+  ExternalLink,
+  ChevronRight, 
 
   Search, 
 
@@ -727,196 +730,261 @@ export default function App() {
       {/* 3. Left Sidebar navigation (Desktop) / Bottom Navbar navigation (Mobile) */}
 
       {!isMobile ? (
-
         <aside style={{
-
-          width: '260px',
-
-          background: 'var(--surface-0)',
-
-          borderRight: '1px solid var(--border)',
-
+          width: '280px',
+          background: 'linear-gradient(180deg, rgba(10, 14, 24, 0.98) 0%, rgba(5, 7, 14, 0.99) 100%)',
+          borderRight: '1px solid rgba(255, 255, 255, 0.07)',
           display: 'flex',
-
           flexDirection: 'column',
-
-          zIndex: 10,
-
+          zIndex: 20,
           flexShrink: 0,
-
           position: 'sticky',
-
           top: 0,
-
           height: '100vh',
-
-          overflow: 'hidden'
-
+          overflow: 'hidden',
+          boxShadow: '4px 0 24px rgba(0, 0, 0, 0.5)'
         }}>
-
-          <div style={{ flex: 1, overflowY: 'auto', padding: '28px 24px 20px 24px', display: 'flex', flexDirection: 'column' }}>
-
-            {/* Logo Area */}
-
-            <div style={{ marginBottom: '36px' }}>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-
-                <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-
-                  <path d="M16 2L3 7V14C3 21.5 8.5 28.5 16 30C23.5 28.5 29 21.5 29 14V7L16 2Z" fill="url(#shield_grad)" stroke="var(--aura-safe)" strokeWidth="1.5"/>
-
-                  <path d="M16 7V25C21 23.5 24.5 18 24.5 14V9.5L16 7Z" fill="var(--aura-safe)" opacity="0.3"/>
-
-                  <defs>
-
-                    <linearGradient id="shield_grad" x1="16" y1="2" x2="16" y2="30" gradientUnits="userSpaceOnUse">
-
-                      <stop stopColor="rgba(157, 110, 255, 0.4)"/>
-
-                      <stop offset="1" stopColor="rgba(0, 229, 160, 0.1)"/>
-
-                    </linearGradient>
-
-                  </defs>
-
-                </svg>
-
-                <div className="font-syne" style={{ fontSize: '26px', fontWeight: '800', letterSpacing: '-0.02em', color: '#fff' }}>
-
+          {/* Top Brand Logo Area */}
+          <div style={{ padding: '28px 24px 20px 24px', borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: '10px',
+                background: 'linear-gradient(135deg, rgba(0, 229, 160, 0.2) 0%, rgba(157, 110, 255, 0.15) 100%)',
+                border: '1.5px solid rgba(0, 229, 160, 0.4)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 0 16px rgba(0, 229, 160, 0.2)'
+              }}>
+                <Shield size={20} color="var(--aura-safe)" />
+              </div>
+              <div>
+                <div className="font-syne" style={{ fontSize: '20px', fontWeight: '800', letterSpacing: '-0.02em', color: '#fff', lineHeight: 1.1 }}>
                   CyberShield
-
                 </div>
-
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+                  <span style={{
+                    display: 'inline-block',
+                    width: '6px',
+                    height: '6px',
+                    background: 'var(--aura-safe)',
+                    borderRadius: '50%',
+                    boxShadow: '0 0 8px var(--aura-safe)',
+                    animation: 'glow-breathe 2s infinite'
+                  }} />
+                  <span className="font-dm-mono" style={{ fontSize: '10px', fontWeight: '500', letterSpacing: '0.12em', color: 'var(--aura-safe)' }}>
+                    PERIMETER SECURE
+                  </span>
+                </div>
               </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
-
-                <span style={{
-
-                  display: 'inline-block',
-
-                  width: '6px',
-
-                  height: '6px',
-
-                  background: 'var(--aura-safe)',
-
-                  borderRadius: '50%',
-
-                  boxShadow: '0 0 8px var(--aura-safe)',
-
-                  animation: 'glow-breathe 2s infinite'
-
-                }} />
-
-                <span className="font-dm-mono" style={{ fontSize: '11px', fontWeight: '400', letterSpacing: '0.12em', color: 'var(--text-secondary)' }}>OPS TERMINAL</span>
-
-              </div>
-
             </div>
-
-
-
-            {/* Navigation links */}
-
-            <nav style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-
-              {[
-                { id: 'dashboard', label: 'THREAT CENTER', Icon: BarChart3 },
-                { id: 'scam-detector', label: 'LINK & SCAM AUDIT', Icon: Search },
-                { id: 'site-scanner', label: 'SITE SECURITY SCANNER', Icon: Globe },
-                { id: 'codexa', label: 'CODEXA CODE REVIEW ↗', Icon: Zap },
-                { id: 'simulator', label: 'ATTACK LABS', Icon: FlaskConical },
-                { id: 'family-safety', label: 'FAMILY SHIELD', Icon: Shield }
-              ].map((item) => {
-
-                const isActive = activeModule === item.id;
-
-                const NavIcon = item.Icon;
-
-                return (
-
-                  <button
-
-                    key={item.id}
-                    onClick={() => {
-                      if (item.id === 'codexa') {
-                        triggerCodexaRedirect();
-                      } else {
-                        setActiveModule(item.id);
-                      }
-                    }}
-                    className="font-dm-sans"
-
-                    style={{
-
-                      display: 'flex',
-
-                      alignItems: 'center',
-
-                      gap: '12px',
-
-                      padding: '12px 16px',
-
-                      background: isActive ? 'rgba(255,255,255,0.03)' : 'transparent',
-
-                      border: 'none',
-
-                      borderRadius: '8px',
-
-                      color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
-
-                      cursor: 'pointer',
-
-                      textAlign: 'left',
-
-                      fontWeight: isActive ? '500' : '400',
-
-                      fontSize: '14px',
-
-                      borderLeft: isActive ? `3px solid ${auraColor}` : '3px solid transparent',
-
-                      width: '100%'
-
-                    }}
-
-                  >
-
-                    <NavIcon size={16} color={isActive ? auraColor : 'var(--text-secondary)'} />
-
-                    <span style={{ letterSpacing: '0.04em' }}>{item.label}</span>
-
-                  </button>
-
-                );
-
-              })}
-
-            </nav>
-
           </div>
 
-
-
-          {/* Live Clock */}
-
-          <div style={{ padding: '0 24px 28px 24px', flexShrink: 0, background: 'var(--surface-0)' }}>
-
-            <div style={{ borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
-
-              <div className="font-dm-mono" style={{ fontSize: '11px', color: 'var(--text-muted)', letterSpacing: '0.12em' }}>SYS TIME</div>
-
-              <div className="font-dm-mono" style={{ fontSize: '20px', fontWeight: '500', color: 'var(--text-secondary)', marginTop: '4px' }}>
-
-                {currentTime || '00:00:00'}
-
+          {/* Navigation Links Scroll Area */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: '22px' }}>
+            
+            {/* Section 1: Security Intelligence */}
+            <div>
+              <div className="font-dm-mono" style={{ fontSize: '9px', fontWeight: '700', color: 'var(--text-muted)', letterSpacing: '0.14em', padding: '0 12px 10px 12px' }}>
+                INTELLIGENCE & AUDIT
               </div>
-
+              <nav style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {[
+                  { id: 'dashboard', label: 'THREAT CENTER', tag: 'LIVE 3D', Icon: BarChart3 },
+                  { id: 'scam-detector', label: 'LINK & SCAM AUDIT', tag: 'HEURISTIC', Icon: Search },
+                  { id: 'site-scanner', label: 'SITE SECURITY SCANNER', tag: 'SSL/DNS', Icon: Globe }
+                ].map((item) => {
+                  const isActive = activeModule === item.id;
+                  const NavIcon = item.Icon;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => setActiveModule(item.id)}
+                      className="font-dm-sans"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '10px 14px',
+                        background: isActive 
+                          ? 'linear-gradient(90deg, rgba(0, 229, 160, 0.12) 0%, rgba(77, 166, 255, 0.04) 100%)' 
+                          : 'transparent',
+                        border: isActive ? '1px solid rgba(0, 229, 160, 0.3)' : '1px solid transparent',
+                        borderLeft: isActive ? '3px solid var(--aura-safe)' : '3px solid transparent',
+                        borderRadius: '10px',
+                        color: isActive ? '#ffffff' : 'var(--text-secondary)',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        fontWeight: isActive ? '600' : '400',
+                        fontSize: '13px',
+                        transition: 'all 0.2s ease',
+                        width: '100%'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <NavIcon size={16} color={isActive ? 'var(--aura-safe)' : 'var(--text-secondary)'} />
+                        <span style={{ letterSpacing: '0.02em' }}>{item.label}</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span className="font-dm-mono" style={{
+                          fontSize: '8px',
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                          background: isActive ? 'rgba(0, 229, 160, 0.18)' : 'rgba(255, 255, 255, 0.04)',
+                          color: isActive ? 'var(--aura-safe)' : 'var(--text-muted)',
+                          fontWeight: '600',
+                          letterSpacing: '0.04em'
+                        }}>
+                          {item.tag}
+                        </span>
+                        {isActive && <ChevronRight size={13} color="var(--aura-safe)" />}
+                      </div>
+                    </button>
+                  );
+                })}
+              </nav>
             </div>
 
+            {/* Section 2: Neural Agents & Labs */}
+            <div>
+              <div className="font-dm-mono" style={{ fontSize: '9px', fontWeight: '700', color: 'var(--text-muted)', letterSpacing: '0.14em', padding: '0 12px 10px 12px' }}>
+                NEURAL AGENTS & LABS
+              </div>
+              <nav style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                
+                {/* Special Highlight: Codexa AI Agent Button */}
+                <button
+                  onClick={() => triggerCodexaRedirect()}
+                  className="font-dm-sans"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '12px 14px',
+                    background: 'linear-gradient(135deg, rgba(157, 110, 255, 0.14) 0%, rgba(0, 229, 160, 0.08) 100%)',
+                    border: '1px solid rgba(157, 110, 255, 0.45)',
+                    borderRadius: '10px',
+                    color: '#ffffff',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    fontWeight: '600',
+                    fontSize: '13px',
+                    boxShadow: '0 4px 16px rgba(157, 110, 255, 0.15)',
+                    transition: 'all 0.25s ease',
+                    width: '100%',
+                    position: 'relative',
+                    overflow: 'hidden'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <Cpu size={16} color="var(--aura-purple)" />
+                    <div>
+                      <div style={{ letterSpacing: '0.02em', color: '#fff', fontSize: '13px', fontWeight: '700' }}>
+                        CODEXA CODE REVIEW
+                      </div>
+                      <div className="font-dm-mono" style={{ fontSize: '9px', color: 'var(--aura-purple)', marginTop: '2px' }}>
+                        AST Security Agent ↗
+                      </div>
+                    </div>
+                  </div>
+                  <span className="font-dm-mono" style={{
+                    fontSize: '8px',
+                    padding: '3px 7px',
+                    borderRadius: '4px',
+                    background: 'rgba(157, 110, 255, 0.25)',
+                    color: 'var(--aura-purple)',
+                    fontWeight: '700',
+                    letterSpacing: '0.05em'
+                  }}>
+                    AI AGENT
+                  </span>
+                </button>
+
+                {/* Labs and Family */}
+                {[
+                  { id: 'simulator', label: 'ATTACK LABS', tag: 'SANDBOX', Icon: FlaskConical },
+                  { id: 'family-safety', label: 'FAMILY SHIELD', tag: 'GUARDIAN', Icon: Shield }
+                ].map((item) => {
+                  const isActive = activeModule === item.id;
+                  const NavIcon = item.Icon;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => setActiveModule(item.id)}
+                      className="font-dm-sans"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '10px 14px',
+                        background: isActive 
+                          ? 'linear-gradient(90deg, rgba(0, 229, 160, 0.12) 0%, rgba(77, 166, 255, 0.04) 100%)' 
+                          : 'transparent',
+                        border: isActive ? '1px solid rgba(0, 229, 160, 0.3)' : '1px solid transparent',
+                        borderLeft: isActive ? '3px solid var(--aura-safe)' : '3px solid transparent',
+                        borderRadius: '10px',
+                        color: isActive ? '#ffffff' : 'var(--text-secondary)',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        fontWeight: isActive ? '600' : '400',
+                        fontSize: '13px',
+                        transition: 'all 0.2s ease',
+                        width: '100%'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <NavIcon size={16} color={isActive ? 'var(--aura-safe)' : 'var(--text-secondary)'} />
+                        <span style={{ letterSpacing: '0.02em' }}>{item.label}</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span className="font-dm-mono" style={{
+                          fontSize: '8px',
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                          background: isActive ? 'rgba(0, 229, 160, 0.18)' : 'rgba(255, 255, 255, 0.04)',
+                          color: isActive ? 'var(--aura-safe)' : 'var(--text-muted)',
+                          fontWeight: '600'
+                        }}>
+                          {item.tag}
+                        </span>
+                        {isActive && <ChevronRight size={13} color="var(--aura-safe)" />}
+                      </div>
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
           </div>
 
+          {/* Bottom Console Diagnostics Widget */}
+          <div style={{
+            padding: '16px 20px',
+            background: 'rgba(5, 7, 14, 0.85)',
+            borderTop: '1px solid rgba(255, 255, 255, 0.06)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '10px'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div className="font-dm-mono" style={{ fontSize: '9px', color: 'var(--text-muted)', letterSpacing: '0.12em' }}>
+                SYS CLOCK (IST)
+              </div>
+              <div className="font-dm-mono" style={{ fontSize: '9px', color: 'var(--aura-safe)', background: 'rgba(0, 229, 160, 0.08)', padding: '2px 6px', borderRadius: '4px', fontWeight: '600' }}>
+                v4.8 ACTIVE
+              </div>
+            </div>
+            
+            <div className="font-dm-mono" style={{ fontSize: '18px', fontWeight: '600', color: '#ffffff', letterSpacing: '0.05em' }}>
+              {currentTime || '00:00:00'}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '4px', borderTop: '1px solid rgba(255, 255, 255, 0.04)' }}>
+              <span className="font-dm-mono" style={{ fontSize: '9px', color: 'var(--text-muted)' }}>ENCRYPTION</span>
+              <span className="font-dm-mono" style={{ fontSize: '9px', color: 'var(--text-secondary)' }}>4096-BIT RSA</span>
+            </div>
+          </div>
         </aside>
 
       ) : (

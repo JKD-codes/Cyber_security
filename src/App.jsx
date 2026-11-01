@@ -1821,6 +1821,103 @@ function DashboardModule({ windowWidth, auraColor, riskScore, setRiskScore }) {
 /* =========================================================================
    MODULE 2: FUNCTIONAL HEURISTIC URL & SCAM AUDIT TERMINAL
    ========================================================================= */
+
+// Local fallback heuristic scanner for Link & Scam Audit
+function analyzeScamLocally(inputText) {
+  const isUrl = inputText.includes('.') && (inputText.toLowerCase().startsWith('http') || inputText.toLowerCase().startsWith('www') || inputText.split(' ')[0].includes('.'));
+  let scamProb = isUrl ? 12 : 8;
+  const redFlags = [];
+  const tactics = [];
+
+  if (isUrl) {
+    const urlLower = inputText.toLowerCase();
+    if (urlLower.startsWith('http://')) {
+      scamProb += 24;
+      redFlags.push('Uses insecure http:// protocol instead of encrypted https://');
+      tactics.push('Protocol Downgrade');
+    }
+    const scamTlds = ['.xyz', '.cc', '.top', '.tk', '.ml', '.ga', '.cf', '.gq', '.net.ru', '.work', '.info'];
+    for (const tld of scamTlds) {
+      if (urlLower.includes(tld)) {
+        scamProb += 35;
+        redFlags.push(`Uses generic high-risk TLD (${tld}) popular in coordinate scam campaigns`);
+        tactics.push('Generic TLD Exploitation');
+        break;
+      }
+    }
+    const homoglyphs = [
+      { keyword: 'paytrn', targets: 'Paytm' },
+      { keyword: 'paytm-rewards', targets: 'Paytm Rewards' },
+      { keyword: 'gpay-bonus', targets: 'Google Pay' },
+      { keyword: 'sbi-kyc', targets: 'State Bank of India (SBI)' },
+      { keyword: 'sbi-login', targets: 'SBI Portal' },
+      { keyword: 'hdfc-secure', targets: 'HDFC Bank' },
+      { keyword: 'amozon', targets: 'Amazon India' },
+      { keyword: 'filpkart', targets: 'Flipkart' }
+    ];
+    for (const h of homoglyphs) {
+      if (urlLower.includes(h.keyword)) {
+        scamProb += 48;
+        redFlags.push(`Typosquatting Match: Mimics trusted brand '${h.targets}' using lookalike letters '${h.keyword}'`);
+        if (!tactics.includes('Brand Impersonation')) tactics.push('Brand Impersonation');
+        if (!tactics.includes('Lookalike Typosquatting')) tactics.push('Lookalike Typosquatting');
+      }
+    }
+  } else {
+    const lowerText = inputText.toLowerCase();
+    tactics.push('Linguistic Heuristics');
+    if (lowerText.includes('otp') || lowerText.includes('verification code') || lowerText.includes('pin')) {
+      scamProb += 22;
+      redFlags.push('Requests confidential security authorization codes (OTP / PIN)');
+      tactics.push('Credential Harvesting');
+    }
+    if (lowerText.includes('electricity') || lowerText.includes('power cut') || lowerText.includes('suspend') || lowerText.includes('block')) {
+      scamProb += 26;
+      redFlags.push('Threatens immediate service deactivation (power lines, bank accounts)');
+      tactics.push('Urgency Trigger');
+    }
+    if (lowerText.includes('kyc') || lowerText.includes('pension') || lowerText.includes('subsidy') || lowerText.includes('pan card')) {
+      scamProb += 20;
+      redFlags.push('References official government updates to build fake authority');
+      tactics.push('Authority Impersonation');
+    }
+    if (lowerText.includes('lottery') || lowerText.includes('reward') || lowerText.includes('win') || lowerText.includes('bonus')) {
+      scamProb += 24;
+      redFlags.push('Offers unrequested financial refunds or cash bonuses');
+      tactics.push('Financial Bait');
+    }
+  }
+
+  scamProb = Math.min(scamProb, 99);
+  let verdict = 'SAFE';
+  let urgency = 'LOW';
+  let recommendation = 'No immediate threat indicators found.';
+
+  if (scamProb > 70) {
+    verdict = 'SCAM';
+    urgency = 'CRITICAL';
+    recommendation = isUrl ? 'DO NOT ACCESS. Close the page immediately. Do not submit primary login cards or passwords.' : 'DO NOT CLICK ANY LINKS OR DIAL THE SENDER. Block the phone line.';
+  } else if (scamProb > 30) {
+    verdict = 'SUSPICIOUS';
+    urgency = 'HIGH';
+    recommendation = isUrl ? 'EXERCISE EXTREME CAUTION. Check the domain prefix against official records.' : 'DO NOT SHARE OTPs. Reach out directly to your banking branch.';
+  } else {
+    if (redFlags.length === 0) {
+      redFlags.push(isUrl ? 'No active homoglyph patterns detected' : 'No active threat verbs detected');
+    }
+  }
+
+  return {
+    scamProbability: scamProb,
+    verdict,
+    manipulationTactics: tactics,
+    redFlags,
+    recommendation,
+    explanation: `Analysis completed for '${inputText}'. Protocol security, TLD repute indices, and linguistic cues evaluated.`,
+    urgencyLevel: urgency
+  };
+}
+
 function ScamDetectorModule({ windowWidth, setRiskScore }) {
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
@@ -1897,16 +1994,16 @@ function ScamDetectorModule({ windowWidth, setRiskScore }) {
         setRiskScore((p) => Math.max(p - 6, 12));
       }
     } catch (err) {
-      console.error(err);
-      setResult({
-        scamProbability: 0,
-        verdict: "SAFE",
-        manipulationTactics: ["Error connecting to backend"],
-        redFlags: ["Analysis failed to execute"],
-        recommendation: "Ensure Python backend is running on port 8000.",
-        explanation: "The connection to the threat intelligence engine was refused.",
-        urgencyLevel: "LOW"
-      });
+      console.warn('Backend unavailable, running local scam heuristics analysis', err);
+      const fallbackResult = analyzeScamLocally(input);
+      setResult(fallbackResult);
+      if (fallbackResult.verdict === 'SCAM') {
+        setRiskScore((p) => Math.min(p + 15, 96));
+      } else if (fallbackResult.verdict === 'SUSPICIOUS') {
+        setRiskScore((p) => Math.min(p + 8, 96));
+      } else {
+        setRiskScore((p) => Math.max(p - 6, 12));
+      }
       setLoading(false);
     }
   };

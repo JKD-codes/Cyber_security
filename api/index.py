@@ -554,7 +554,18 @@ async def check_credential(req: Optional[CredentialCheckRequest] = None, target:
                     f"https://api.xposedornot.com/v1/check-email/{email_clean}",
                     headers={"User-Agent": "CyberShield-Security-Auditor/1.0"}
                 )
-                if resp.status_code == 200:
+                if resp.status_code == 404 or (resp.status_code == 200 and resp.json().get("Error") == "Not found"):
+                    return {
+                        "status": "success",
+                        "target": clean,
+                        "type": "email",
+                        "breached": False,
+                        "count": 0,
+                        "riskScore": 12,
+                        "matches": [],
+                        "summary": "Zero compromised entries found in global leak registries."
+                    }
+                elif resp.status_code == 200:
                     data = resp.json()
                     raw_breaches = data.get("breaches", [])
                     breach_names = []

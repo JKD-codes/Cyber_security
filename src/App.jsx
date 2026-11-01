@@ -1689,20 +1689,32 @@ function DashboardModule({ windowWidth, auraColor, riskScore, setRiskScore }) {
                     )}
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '180px', overflowY: 'auto', paddingRight: '4px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxHeight: '280px', overflowY: 'auto', paddingRight: '6px' }}>
                     {breachResult.map((leak, idx) => (
-                      <div key={idx} className="glass-card cyber-terminal-overlay text-wrap-safe" style={{ background: 'rgba(5, 5, 8, 0.75)', padding: '14px', border: '1px solid var(--border)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                          <span className="font-syne text-wrap-safe" style={{ fontSize: '13px', fontWeight: '700', color: '#fff' }}>{leak.source}</span>
-                          <span className="font-dm-mono" style={{ fontSize: '9px', background: leak.riskRating === 'CRITICAL' ? 'rgba(255,61,90,0.15)' : 'rgba(255,183,77,0.15)', color: leak.riskRating === 'CRITICAL' ? 'var(--aura-danger)' : 'var(--aura-watch)', padding: '2px 6px', borderRadius: '4px', fontWeight: '600' }}>
+                      <div key={idx} className="glass-card cyber-terminal-overlay text-wrap-safe" style={{ background: 'rgba(5, 5, 8, 0.85)', padding: '16px', border: '1px solid var(--border)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px', gap: '8px' }}>
+                          <div>
+                            <span className="font-syne text-wrap-safe" style={{ fontSize: '14px', fontWeight: '700', color: '#fff' }}>{leak.source}</span>
+                            {leak.records > 0 && (
+                              <div className="font-dm-mono" style={{ fontSize: '10px', color: 'var(--aura-purple)', marginTop: '2px' }}>
+                                📊 {Number(leak.records).toLocaleString()} accounts compromised
+                              </div>
+                            )}
+                          </div>
+                          <span className="font-dm-mono" style={{ fontSize: '9px', background: leak.riskRating === 'CRITICAL' ? 'rgba(255,61,90,0.2)' : 'rgba(255,183,77,0.2)', color: leak.riskRating === 'CRITICAL' ? 'var(--aura-danger)' : 'var(--aura-watch)', padding: '2px 8px', borderRadius: '4px', fontWeight: '700', flexShrink: 0 }}>
                             {leak.riskRating}
                           </span>
                         </div>
                         <div className="font-dm-mono text-wrap-safe" style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
-                          EXPOSED: {leak.leakType}
+                          <strong style={{ color: 'var(--aura-safe)' }}>EXPOSED DATA:</strong> {leak.leakType}
                         </div>
-                        <p className="font-dm-sans text-wrap-safe" style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.4', borderLeft: '2px solid var(--aura-purple)', paddingLeft: '8px' }}>
-                          <strong>ACTION:</strong> {leak.recommendations}
+                        {leak.details && (
+                          <div className="font-dm-sans text-wrap-safe" style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '10px', lineHeight: '1.5', background: 'rgba(255,255,255,0.02)', padding: '8px 10px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.04)' }}>
+                            {leak.details}
+                          </div>
+                        )}
+                        <p className="font-dm-sans text-wrap-safe" style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.4', borderLeft: '3px solid var(--aura-purple)', paddingLeft: '10px', margin: 0 }}>
+                          <strong style={{ color: '#fff' }}>REMEDIATION:</strong> {leak.recommendations}
                         </p>
                       </div>
                     ))}

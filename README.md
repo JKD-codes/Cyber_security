@@ -31,30 +31,30 @@ Whether auditing web perimeters, investigating suspicious communications, or edu
 
 ```mermaid
 flowchart TD
-    User([Security Operator / End User]) --> UI[CyberShield React 19 Client\nVite 8 + Glassmorphism UI]
+    User["Security Operator / End User"] --> UI["CyberShield React 19 Client (Vite 8)"]
     
     subgraph Frontend["Frontend Client Engines (Browser Native)"]
-        UI --> ThreatGlobe[Native 3D Canvas Threat Globe\nSpherical Trigonometry + Drag Projection]
-        UI --> WebCrypto[Web Crypto API\nSHA-1 In-Browser k-Anonymity Fallback]
-        UI --> PDFGen[jsPDF Audit Engine\nSigned Vector PDF Memorandums]
-        UI --> CodexaLink[Codexa AI Bridge\nAST Code Review Integration]
+        UI --> ThreatGlobe["Native 3D Canvas Threat Globe"]
+        UI --> WebCrypto["Web Crypto API (SHA-1 k-Anonymity)"]
+        UI --> PDFGen["jsPDF Audit Memorandum Engine"]
+        UI --> CodexaLink["Codexa AI Code Review Bridge"]
     end
 
     subgraph Backend["FastAPI Intelligence Gateway (api/index.py)"]
-        UI -->|REST API Requests| API[FastAPI Async Server]
+        UI --> API["FastAPI Asynchronous Server"]
         
-        API --> HeaderEngine[Perimeter Header Auditor\nCSP, HSTS, X-Frame, X-XSS, Server Versions]
-        API --> FileProbes[Active Sensitive File Probes\nSoft-404 Detection on /.env, /.git/config]
-        API --> ScamEngine[Dual-Tier Scam Detector\nLinguistic Heuristics + BeautifulSoup Scraper]
-        API --> CredEngine[Credential Leak Auditor\nk-Anonymity Hash Slicing Engine]
+        API --> HeaderEngine["Perimeter Header Auditor (CSP, HSTS, X-Frame)"]
+        API --> FileProbes["Active File Probes (Soft-404 on env, git)"]
+        API --> ScamEngine["Dual-Tier Scam Detector (Heuristics + DOM Scraping)"]
+        API --> CredEngine["Credential Leak Auditor (Hash Slicing Engine)"]
     end
 
     subgraph Intelligence["External Intelligence & ML Corpuses"]
-        ScamEngine --> MLModel[Random Forest Classifier\nTF-IDF N-Gram Vectorizer (models/)]
-        CredEngine --> HIBP[HaveIBeenPwned API\nRange Suffix Protocol]
-        CredEngine --> Xposed[XposedOrNot Live API\nDark Web Breach Indices]
-        CredEngine --> Catalog[(Local 796-Breach Catalog\nIndian & Global Exposure Incidents)]
-        HeaderEngine --> TargetSite[(Target Perimeter Host)]
+        ScamEngine --> MLModel["Random Forest Classifier (TF-IDF Vectorizer)"]
+        CredEngine --> HIBP["HaveIBeenPwned API (Range Suffix Protocol)"]
+        CredEngine --> Xposed["XposedOrNot Live API (Dark Web Breach Indices)"]
+        CredEngine --> Catalog[("Local 796-Breach Catalog (Indian & Global Leaks)")]
+        HeaderEngine --> TargetSite[("Target Perimeter Host")]
     end
 ```
 

@@ -1246,25 +1246,25 @@ export default function App() {
       {/* 4. Main viewport content container */}
 
       <main style={{
-
         flex: 1,
-
-        padding: isMobile ? '24px 16px 88px 16px' : '40px',
-
+        padding: isMobile ? '20px 16px 88px 16px' : '36px 40px',
         overflowY: 'auto',
-
         position: 'relative',
-
         zIndex: 5,
-
         display: 'flex',
-
-        flexDirection: 'column'
-
+        flexDirection: 'column',
+        alignItems: 'center',
+        width: '100%'
       }}>
-
-        {renderModuleContent()}
-
+        <div style={{
+          width: '100%',
+          maxWidth: '1160px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '28px'
+        }}>
+          {renderModuleContent()}
+        </div>
       </main>
 
 
@@ -2688,7 +2688,7 @@ function DashboardModule({ windowWidth, auraColor, riskScore, setRiskScore }) {
 
         className="glass-card glass-card-purple" 
 
-        style={{ width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '28px 32px', position: 'relative' }}
+        style={{ width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '24px 28px', position: 'relative' }}
 
       >
 
@@ -3617,7 +3617,7 @@ function ScamDetectorModule({ windowWidth, setRiskScore }) {
 
       {/* Input panel card */}
 
-      <div className="glass-card" style={{ padding: '28px', position: 'relative', minHeight: '200px' }}>
+      <div className="glass-card" style={{ padding: '28px', position: 'relative', minHeight: loading ? '180px' : 'auto' }}>
 
         
 
@@ -4573,7 +4573,7 @@ function FootprintModule({ windowWidth, setRiskScore, setTriggerLaser }) {
 
       {/* Main Checklist Card */}
 
-      <div className="glass-card" style={{ padding: '28px', position: 'relative', minHeight: '200px' }}>
+      <div className="glass-card" style={{ padding: '28px', position: 'relative', minHeight: loading ? '180px' : 'auto' }}>
 
         {loading && <MatrixLoader message="Executing full static configuration compile scans..." />}
 
@@ -6695,7 +6695,7 @@ function SiteScannerModule({ windowWidth, setRiskScore, setTriggerLaser }) {
 
       {/* Input Form */}
 
-      <div className="glass-card" style={{ padding: '28px', position: 'relative', minHeight: '200px' }}>
+      <div className="glass-card" style={{ padding: '28px', position: 'relative', minHeight: loading ? '180px' : 'auto' }}>
 
         {loading && <MatrixLoader message={loadingMessage} />}
 

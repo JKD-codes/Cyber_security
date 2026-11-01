@@ -60,8 +60,8 @@ def analyze_headers(headers: dict):
         })
 
     # 3. Server Fingerprint
-    server = headers.get("server", "")
-    x_powered_by = headers.get("x-powered-by", "")
+    server = headers.get("server", "").strip()
+    x_powered_by = headers.get("x-powered-by", "").strip()
     fingerprint = server or x_powered_by
     if fingerprint:
         if re.search(r'\d+\.\d+', fingerprint):
@@ -72,7 +72,7 @@ def analyze_headers(headers: dict):
                 "description": f"The server is leaking its exact version number: '{fingerprint}'. This allows attackers to easily look up known CVEs.",
                 "solution": "Configure your web server to hide version numbers in the 'Server' and 'X-Powered-By' headers."
             })
-        else:
+        elif fingerprint.lower() in ["apache", "nginx", "iis", "microsoft-iis", "gunicorn", "uvicorn", "tomcat", "express", "php"]:
             issues.append({
                 "id": "server_fingerprint",
                 "title": "Exposed Server Fingerprint",
@@ -80,6 +80,10 @@ def analyze_headers(headers: dict):
                 "description": f"The server is revealing its technology stack: '{fingerprint}'. While no exact version is leaked, it still gives attackers intelligence.",
                 "solution": "Change the Server header to a generic value or remove it entirely."
             })
+        else:
+            passed.append(f"Server header is sanitized / protected ('{fingerprint}')")
+    else:
+        passed.append("Server fingerprint hidden / suppressed")
 
     # 4. Content-Security-Policy (CSP)
     csp = headers.get("content-security-policy", "")
@@ -91,16 +95,30 @@ def analyze_headers(headers: dict):
             "description": "No CSP was found. While hard to implement on legacy sites without breaking features, it is the best defense against Cross-Site Scripting (XSS).",
             "solution": "Implement a CSP starting with \"default-src 'self'\" and gradually allow required domains."
         })
-    elif "unsafe-inline" in csp:
-        issues.append({
-            "id": "csp_unsafe",
-            "title": "Weak Content-Security-Policy",
-            "severity": "HIGH",
-            "description": "The CSP allows 'unsafe-inline' scripts. This completely defeats the primary purpose of a CSP, as attackers can still inject malicious inline scripts.",
-            "solution": "Remove 'unsafe-inline' from the script-src directive. Move inline scripts to external JS files or use nonces/hashes."
-        })
     else:
-        passed.append("Strong Content-Security-Policy is enforced")
+        # Check if script-src specifically allows unsafe-inline (styles are allowed in modern CSP3)
+        csp_parts = [p.strip().lower() for p in csp.split(";")]
+        script_parts = [p for p in csp_parts if p.startswith("script-src")]
+        default_parts = [p for p in csp_parts if p.startswith("default-src")]
+        
+        has_script_unsafe = False
+        if script_parts:
+            has_script_unsafe = "'unsafe-inline'" in script_parts[0] or "unsafe-inline" in script_parts[0]
+        elif default_parts:
+            has_script_unsafe = "'unsafe-inline'" in default_parts[0] or "unsafe-inline" in default_parts[0]
+        elif "style-src" not in csp and "unsafe-inline" in csp:
+            has_script_unsafe = True
+
+        if has_script_unsafe:
+            issues.append({
+                "id": "csp_unsafe",
+                "title": "Weak Content-Security-Policy",
+                "severity": "HIGH",
+                "description": "The CSP allows 'unsafe-inline' scripts. This completely defeats the primary purpose of a CSP, as attackers can still inject malicious inline scripts.",
+                "solution": "Remove 'unsafe-inline' from the script-src directive. Move inline scripts to external JS files or use nonces/hashes."
+            })
+        else:
+            passed.append("Strong Content-Security-Policy is enforced (scripts protected)")
 
     # 5. X-Frame-Options
     x_frame = headers.get("x-frame-options", "")

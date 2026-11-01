@@ -59,16 +59,20 @@ export function downloadScamAuditPdf(targetInput, result) {
 
   const now = new Date();
   const dateStr = now.toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
+    month: 'short',
+    day: '2-digit',
+    year: 'numeric'
   });
   const timeStr = now.toLocaleTimeString('en-US', {
     hour: '2-digit',
     minute: '2-digit',
-    second: '2-digit',
     hour12: true
+  });
+  const fullDateStr = now.toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
   });
   const auditId = 'CS-AUD-' + now.getFullYear() + '-' + Math.floor(100000 + Math.random() * 900000);
 
@@ -99,94 +103,118 @@ export function downloadScamAuditPdf(targetInput, result) {
   }
 
   // --- TOP HEADER BAR ---
-  doc.setFillColor(15, 20, 32);
-  doc.rect(margin, y, contentWidth, 54, 'F');
+  const headerHeight = 58;
+  // Deep Executive Navy (eliminating harsh pitch black)
+  doc.setFillColor(18, 26, 44);
+  doc.roundedRect(margin, y, contentWidth, headerHeight, 6, 6, 'F');
 
+  // Accent Line at top: CyberShield Teal
+  doc.setFillColor(0, 229, 160);
+  doc.roundedRect(margin, y, contentWidth, 3.5, 2, 2, 'F');
+
+  // Header Typography with generous inner padding
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(13);
+  doc.setFontSize(12.5);
   doc.setTextColor(255, 255, 255);
-  doc.text('CYBERSHIELD SECURITY OPERATIONS CENTER', margin + 14, y + 22);
+  doc.text('CYBERSHIELD SECURITY OPERATIONS CENTER', margin + 18, y + 25);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
-  doc.setTextColor(170, 185, 210);
-  doc.text('PERIMETER SURVEILLANCE & FRAUD MITIGATION MEMORANDUM', margin + 14, y + 38);
+  doc.setTextColor(165, 182, 208);
+  doc.text('PERIMETER SURVEILLANCE & FRAUD MITIGATION MEMORANDUM', margin + 18, y + 43);
 
-  // Security Classification Tag
-  doc.setFillColor(35, 45, 68);
-  doc.roundedRect(margin + contentWidth - 110, y + 14, 98, 22, 3, 3, 'F');
+  // Security Classification Tag (Pill)
+  const badgeWidth = 105;
+  const badgeHeight = 22;
+  const badgeX = margin + contentWidth - badgeWidth - 16;
+  const badgeY = y + 18;
+  doc.setFillColor(28, 40, 68);
+  doc.setDrawColor(48, 68, 110);
+  doc.setLineWidth(0.8);
+  doc.roundedRect(badgeX, badgeY, badgeWidth, badgeHeight, 4, 4, 'FD');
+
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(7.5);
-  doc.setTextColor(255, 200, 80);
-  doc.text('RESTRICTED / SOC', margin + contentWidth - 61, y + 28, { align: 'center' });
+  doc.setTextColor(255, 195, 70);
+  doc.text('RESTRICTED / SOC', badgeX + badgeWidth / 2, badgeY + 14, { align: 'center' });
 
-  y += 66;
+  // Advance y past header with generous vertical breathing room (prevents title overlap)
+  y += headerHeight + 42;
 
   // --- REPORT TITLE ---
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(18);
-  doc.setTextColor(20, 25, 38);
+  doc.setTextColor(18, 26, 44);
   doc.text('Communication Security & Fraud Audit Report', margin, y);
-  y += 18;
+  y += 24;
 
   // --- METADATA CARD ---
-  doc.setFillColor(246, 248, 252);
-  doc.setDrawColor(220, 226, 238);
+  const metaCardHeight = 82;
+  doc.setFillColor(248, 250, 253);
+  doc.setDrawColor(222, 228, 238);
   doc.setLineWidth(1);
-  doc.roundedRect(margin, y, contentWidth, 76, 4, 4, 'FD');
+  doc.roundedRect(margin, y, contentWidth, metaCardHeight, 6, 6, 'FD');
 
-  const metaLeft = margin + 14;
-  const metaRight = margin + contentWidth / 2 + 10;
-  let metaY = y + 18;
+  const col1LabelX = margin + 18;
+  const col1ValX = margin + 104;
+  const col2LabelX = margin + 276;
+  const col2ValX = margin + 358;
+
+  const cardStartY = y;
+  const r1Y = cardStartY + 20;
+  const r2Y = cardStartY + 41;
+  const r3Y = cardStartY + 62;
 
   doc.setFontSize(8.5);
 
-  // Col 1
+  // Row 1
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(90, 100, 115);
-  doc.text('Report Identifier:', metaLeft, metaY);
+  doc.setTextColor(90, 102, 120);
+  doc.text('Report Identifier:', col1LabelX, r1Y);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(20, 25, 35);
-  doc.text(auditId, metaLeft + 90, metaY);
+  doc.setTextColor(20, 26, 38);
+  doc.text(auditId, col1ValX, r1Y);
 
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(90, 100, 115);
-  doc.text('Audit Date & Time:', metaLeft, metaY + 18);
+  doc.setTextColor(90, 102, 120);
+  doc.text('Auditing Body:', col2LabelX, r1Y);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(20, 25, 35);
-  doc.text(`${dateStr} at ${timeStr}`, metaLeft + 90, metaY + 18);
+  doc.setTextColor(20, 26, 38);
+  doc.text('Threat Intelligence Desk', col2ValX, r1Y);
+
+  // Row 2
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(90, 102, 120);
+  doc.text('Audit Timestamp:', col1LabelX, r2Y);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(20, 26, 38);
+  doc.text(`${dateStr} • ${timeStr}`, col1ValX, r2Y);
 
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(90, 100, 115);
-  doc.text('Target Category:', metaLeft, metaY + 36);
+  doc.setTextColor(90, 102, 120);
+  doc.text('Target Payload:', col2LabelX, r2Y);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(20, 25, 35);
-  doc.text(targetLabel, metaLeft + 90, metaY + 36);
+  doc.setTextColor(20, 26, 38);
+  const truncTarget = cleanInput.length > 28 ? cleanInput.substring(0, 26) + '...' : cleanInput;
+  doc.text(truncTarget, col2ValX, r2Y);
 
-  // Col 2
+  // Row 3
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(90, 100, 115);
-  doc.text('Auditing Body:', metaRight, metaY);
+  doc.setTextColor(90, 102, 120);
+  doc.text('Target Category:', col1LabelX, r3Y);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(20, 25, 35);
-  doc.text('Cyber Threat Intelligence Desk', metaRight + 80, metaY);
-
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(90, 100, 115);
-  doc.text('Target Payload:', metaRight, metaY + 18);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(20, 25, 35);
-  const truncTarget = cleanInput.length > 32 ? cleanInput.substring(0, 30) + '...' : cleanInput;
-  doc.text(truncTarget, metaRight + 80, metaY + 18);
+  doc.setTextColor(20, 26, 38);
+  const truncCategory = targetLabel.length > 28 ? targetLabel.substring(0, 26) + '...' : targetLabel;
+  doc.text(truncCategory, col1ValX, r3Y);
 
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(90, 100, 115);
-  doc.text('Compliance Level:', metaRight, metaY + 36);
+  doc.setTextColor(90, 102, 120);
+  doc.text('Compliance Level:', col2LabelX, r3Y);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(20, 25, 35);
-  doc.text('Authorized Incident Review', metaRight + 80, metaY + 36);
+  doc.setTextColor(20, 26, 38);
+  doc.text('Authorized Incident Review', col2ValX, r3Y);
 
-  y += 90;
+  y += metaCardHeight + 24;
 
   // --- VERDICT STATUS CARD ---
   let statusBg = [255, 240, 240];
@@ -236,9 +264,9 @@ export function downloadScamAuditPdf(targetInput, result) {
 
   let execText = '';
   if (verdict === 'SCAM') {
-    execText = `During the formal audit performed on ${dateStr}, the incident investigation desk verified dangerous social engineering and deceptive markers in the submitted target. The examination noted specific attempts to manipulate user trust and bypass standard security verifications. Immediate protective measures are advised to prevent credential theft or unauthorized financial loss.`;
+    execText = `During the formal audit performed on ${fullDateStr}, the incident investigation desk verified dangerous social engineering and deceptive markers in the submitted target. The examination noted specific attempts to manipulate user trust and bypass standard security verifications. Immediate protective measures are advised to prevent credential theft or unauthorized financial loss.`;
   } else if (verdict === 'SUSPICIOUS') {
-    execText = `During the formal audit performed on ${dateStr}, the incident investigation desk identified irregular behavioral indicators in the submitted asset. While outright system intrusion was not conclusively established, the anomalous markers warrant serious vigilance. Users should not provide security tokens or authenticate identity until confirmed by an independent official authority.`;
+    execText = `During the formal audit performed on ${fullDateStr}, the incident investigation desk identified irregular behavioral indicators in the submitted asset. While outright system intrusion was not conclusively established, the anomalous markers warrant serious vigilance. Users should not provide security tokens or authenticate identity until confirmed by an independent official authority.`;
   } else {
     execText = `During the formal audit performed on ${dateStr}, the inspection desk confirmed that the evaluated communication conforms to standard legitimate transmission patterns. No overt malicious redirection or social engineering triggers were observed. Personnel should continue following regular operational security practices.`;
   }
@@ -432,16 +460,20 @@ export function downloadSiteSecurityPdf(targetUrl, scanResult) {
 
   const now = new Date();
   const dateStr = now.toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
+    month: 'short',
+    day: '2-digit',
+    year: 'numeric'
   });
   const timeStr = now.toLocaleTimeString('en-US', {
     hour: '2-digit',
     minute: '2-digit',
-    second: '2-digit',
     hour12: true
+  });
+  const fullDateStr = now.toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
   });
   const scanId = 'CS-SCAN-' + now.getFullYear() + '-' + Math.floor(100000 + Math.random() * 900000);
 
@@ -474,94 +506,117 @@ export function downloadSiteSecurityPdf(targetUrl, scanResult) {
   }
 
   // --- TOP HEADER BAR ---
-  doc.setFillColor(15, 20, 32);
-  doc.rect(margin, y, contentWidth, 54, 'F');
+  const headerHeight = 58;
+  // Deep Executive Navy (eliminating harsh pitch black)
+  doc.setFillColor(18, 26, 44);
+  doc.roundedRect(margin, y, contentWidth, headerHeight, 6, 6, 'F');
 
+  // Accent Line at top: CyberShield Teal
+  doc.setFillColor(0, 229, 160);
+  doc.roundedRect(margin, y, contentWidth, 3.5, 2, 2, 'F');
+
+  // Header Typography with generous inner padding
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(13);
+  doc.setFontSize(12.5);
   doc.setTextColor(255, 255, 255);
-  doc.text('CYBERSHIELD SECURITY OPERATIONS CENTER', margin + 14, y + 22);
+  doc.text('CYBERSHIELD SECURITY OPERATIONS CENTER', margin + 18, y + 25);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
-  doc.setTextColor(170, 185, 210);
-  doc.text('PERIMETER DEFENSE & VULNERABILITY AUDIT MEMORANDUM', margin + 14, y + 38);
+  doc.setTextColor(165, 182, 208);
+  doc.text('PERIMETER DEFENSE & VULNERABILITY AUDIT MEMORANDUM', margin + 18, y + 43);
 
-  // Security Tag
-  doc.setFillColor(35, 45, 68);
-  doc.roundedRect(margin + contentWidth - 110, y + 14, 98, 22, 3, 3, 'F');
+  // Security Tag (Pill)
+  const badgeWidth = 98;
+  const badgeHeight = 22;
+  const badgeX = margin + contentWidth - badgeWidth - 16;
+  const badgeY = y + 18;
+  doc.setFillColor(28, 40, 68);
+  doc.setDrawColor(48, 68, 110);
+  doc.setLineWidth(0.8);
+  doc.roundedRect(badgeX, badgeY, badgeWidth, badgeHeight, 4, 4, 'FD');
+
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(7.5);
   doc.setTextColor(0, 229, 160);
-  doc.text('OFFICIAL AUDIT', margin + contentWidth - 61, y + 28, { align: 'center' });
+  doc.text('OFFICIAL AUDIT', badgeX + badgeWidth / 2, badgeY + 14, { align: 'center' });
 
-  y += 66;
+  // Advance y past header with generous vertical breathing room (prevents title overlap)
+  y += headerHeight + 42;
 
   // --- TITLE ---
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(18);
-  doc.setTextColor(20, 25, 38);
+  doc.setTextColor(18, 26, 44);
   doc.text('Perimeter Security & Vulnerability Assessment', margin, y);
-  y += 18;
+  y += 24;
 
   // --- METADATA CARD ---
-  doc.setFillColor(246, 248, 252);
-  doc.setDrawColor(220, 226, 238);
+  const metaCardHeight = 82;
+  doc.setFillColor(248, 250, 253);
+  doc.setDrawColor(222, 228, 238);
   doc.setLineWidth(1);
-  doc.roundedRect(margin, y, contentWidth, 76, 4, 4, 'FD');
+  doc.roundedRect(margin, y, contentWidth, metaCardHeight, 6, 6, 'FD');
 
-  const metaLeft = margin + 14;
-  const metaRight = margin + contentWidth / 2 + 10;
-  let metaY = y + 18;
+  const col1LabelX = margin + 18;
+  const col1ValX = margin + 104;
+  const col2LabelX = margin + 276;
+  const col2ValX = margin + 358;
+
+  const cardStartY = y;
+  const r1Y = cardStartY + 20;
+  const r2Y = cardStartY + 41;
+  const r3Y = cardStartY + 62;
 
   doc.setFontSize(8.5);
 
-  // Col 1
+  // Row 1
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(90, 100, 115);
-  doc.text('Audit Reference:', metaLeft, metaY);
+  doc.setTextColor(90, 102, 120);
+  doc.text('Audit Reference:', col1LabelX, r1Y);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(20, 25, 35);
-  doc.text(scanId, metaLeft + 90, metaY);
+  doc.setTextColor(20, 26, 38);
+  doc.text(scanId, col1ValX, r1Y);
 
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(90, 100, 115);
-  doc.text('Audit Timestamp:', metaLeft, metaY + 18);
+  doc.setTextColor(90, 102, 120);
+  doc.text('Target Host:', col2LabelX, r1Y);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(20, 25, 35);
-  doc.text(`${dateStr} at ${timeStr}`, metaLeft + 90, metaY + 18);
+  doc.setTextColor(20, 26, 38);
+  const truncUrl = cleanUrl.length > 28 ? cleanUrl.substring(0, 26) + '...' : cleanUrl;
+  doc.text(truncUrl, col2ValX, r1Y);
+
+  // Row 2
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(90, 102, 120);
+  doc.text('Audit Timestamp:', col1LabelX, r2Y);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(20, 26, 38);
+  doc.text(`${dateStr} • ${timeStr}`, col1ValX, r2Y);
 
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(90, 100, 115);
-  doc.text('Inspection Type:', metaLeft, metaY + 36);
+  doc.setTextColor(90, 102, 120);
+  doc.text('Assessing Unit:', col2LabelX, r2Y);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(20, 25, 35);
-  doc.text('HTTP Headers & Perimeter Probing', metaLeft + 90, metaY + 36);
+  doc.setTextColor(20, 26, 38);
+  doc.text('Perimeter Vulnerability Team', col2ValX, r2Y);
 
-  // Col 2
+  // Row 3
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(90, 100, 115);
-  doc.text('Target Host:', metaRight, metaY);
+  doc.setTextColor(90, 102, 120);
+  doc.text('Inspection Type:', col1LabelX, r3Y);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(20, 25, 35);
-  const truncUrl = cleanUrl.length > 32 ? cleanUrl.substring(0, 30) + '...' : cleanUrl;
-  doc.text(truncUrl, metaRight + 75, metaY);
-
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(90, 100, 115);
-  doc.text('Assessing Unit:', metaRight, metaY + 18);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(20, 25, 35);
-  doc.text('Perimeter Vulnerability Team', metaRight + 75, metaY + 18);
+  doc.setTextColor(20, 26, 38);
+  doc.text('HTTP Headers & Probing', col1ValX, r3Y);
 
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(90, 100, 115);
-  doc.text('Document Status:', metaRight, metaY + 36);
+  doc.setTextColor(90, 102, 120);
+  doc.text('Document Status:', col2LabelX, r3Y);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(20, 25, 35);
-  doc.text('Confidential Technical Directive', metaRight + 75, metaY + 36);
+  doc.setTextColor(20, 26, 38);
+  doc.text('Confidential Technical Directive', col2ValX, r3Y);
 
-  y += 90;
+  y += metaCardHeight + 24;
 
   // --- GRADE & POSTURE BANNER ---
   let statusBg = [255, 240, 240];
@@ -611,11 +666,11 @@ export function downloadSiteSecurityPdf(targetUrl, scanResult) {
 
   let execText = '';
   if (['A', 'B'].includes(grade)) {
-    execText = `A comprehensive perimeter security assessment was completed on ${dateStr} for target host ${cleanUrl}. The site demonstrates solid defensive configurations with core transport and browser protection controls effectively deployed. A few preventative recommendations are noted below to further solidify perimeter posture.`;
+    execText = `A comprehensive perimeter security assessment was completed on ${fullDateStr} for target host ${cleanUrl}. The site demonstrates solid defensive configurations with core transport and browser protection controls effectively deployed. A few preventative recommendations are noted below to further solidify perimeter posture.`;
   } else if (grade === 'C') {
-    execText = `A comprehensive perimeter security assessment was completed on ${dateStr} for target host ${cleanUrl}. The assessment revealed moderate configuration gaps in HTTP defense headers and browser hardening mechanisms. While no immediate system breach was observed, these omissions leave the application exposed to cross-site scripting and unauthorized framing.`;
+    execText = `A comprehensive perimeter security assessment was completed on ${fullDateStr} for target host ${cleanUrl}. The assessment revealed moderate configuration gaps in HTTP defense headers and browser hardening mechanisms. While no immediate system breach was observed, these omissions leave the application exposed to cross-site scripting and unauthorized framing.`;
   } else {
-    execText = `A comprehensive perimeter security assessment was completed on ${dateStr} for target host ${cleanUrl}. The target exhibited critical security deficiencies and missing baseline defense mechanisms. Immediate administrative intervention is required to patch high-severity exposure points before production traffic continues.`;
+    execText = `A comprehensive perimeter security assessment was completed on ${fullDateStr} for target host ${cleanUrl}. The target exhibited critical security deficiencies and missing baseline defense mechanisms. Immediate administrative intervention is required to patch high-severity exposure points before production traffic continues.`;
   }
 
   doc.setFont('helvetica', 'normal');

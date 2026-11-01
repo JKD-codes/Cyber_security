@@ -141,8 +141,8 @@ export default function App() {
         return <ScamDetectorModule windowWidth={windowWidth} setRiskScore={setRiskScore} />;
       case 'site-scanner':
         return <SiteScannerModule windowWidth={windowWidth} setRiskScore={setRiskScore} setTriggerLaser={setTriggerLaser} />;
-      case 'footprint':
-        return <FootprintModule windowWidth={windowWidth} setRiskScore={setRiskScore} setTriggerLaser={setTriggerLaser} />;
+            // case 'footprint':
+      // return <FootprintModule windowWidth={windowWidth} setRiskScore={setRiskScore} setTriggerLaser={setTriggerLaser} />;
       case 'simulator':
         return <AttackSimulatorModule windowWidth={windowWidth} />;
       case 'family-safety':
@@ -219,7 +219,7 @@ export default function App() {
                 { id: 'dashboard', label: 'THREAT CENTER', icon: '📊' },
                 { id: 'scam-detector', label: 'LINK & SCAM AUDIT', icon: '🔍' },
                 { id: 'site-scanner', label: 'SITE SECURITY SCANNER', icon: '🌐' },
-                { id: 'footprint', label: 'OWASP AUDITOR', icon: '👣' },
+                // { id: 'footprint', label: 'OWASP AUDITOR', icon: '👣' },
                 { id: 'simulator', label: 'ATTACK LABS', icon: '🧪' },
                 { id: 'family-safety', label: 'FAMILY SHIELD', icon: '🏠' }
               ].map((item) => {
@@ -292,7 +292,7 @@ export default function App() {
             { id: 'dashboard', label: 'Center', icon: '📊' },
             { id: 'scam-detector', label: 'Audit', icon: '🔍' },
             { id: 'site-scanner', label: 'Scanner', icon: '🌐' },
-            { id: 'footprint', label: 'OWASP', icon: '👣' },
+            // { id: 'footprint', label: 'OWASP', icon: '👣' },
             { id: 'simulator', label: 'Labs', icon: '🧪' },
             { id: 'family-safety', label: 'Family', icon: '🏠' }
           ].map((item) => {

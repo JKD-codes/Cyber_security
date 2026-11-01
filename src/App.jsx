@@ -308,6 +308,235 @@ function renderAttackIcon(key, size = 20, color = 'var(--aura-purple)') {
 
 
 
+/* =========================================================================
+   CINEMATIC CODEXA NEURAL BRIDGE TRANSITION OVERLAY
+   Executive warp tunnel transition between CyberShield and Codexa AI
+   ========================================================================= */
+function CodexaTransitionScreen({ launching, onComplete, onCancel }) {
+  const [progress, setProgress] = useState(0);
+  const [stage, setStage] = useState(0);
+
+  const stages = [
+    { text: "ESTABLISHING ENCRYPTED QUANTUM BRIDGE...", code: "TLS_1.3_ECDSA_WITH_CHACHA20" },
+    { text: "SYNCHRONIZING STATIC AST HEURISTICS...", code: "AST_VECTORS: 884 PARSED" },
+    { text: "CALIBRATING CODEXA NEURAL ENGINE...", code: "PORTAL_ID: codexa-ye85.onrender.com" },
+    { text: "NEURAL HANDSHAKE VERIFIED — LAUNCHING TERMINAL", code: "STATUS: 200 OK | REDIRECTING" }
+  ];
+
+  useEffect(() => {
+    if (!launching) {
+      setProgress(0);
+      setStage(0);
+      return;
+    }
+
+    const t1 = setTimeout(() => { setProgress(28); setStage(1); }, 400);
+    const t2 = setTimeout(() => { setProgress(62); setStage(2); }, 900);
+    const t3 = setTimeout(() => { setProgress(90); setStage(3); }, 1400);
+    const t4 = setTimeout(() => {
+      setProgress(100);
+      setTimeout(() => {
+        onComplete();
+      }, 400);
+    }, 1800);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      clearTimeout(t4);
+    };
+  }, [launching]);
+
+  if (!launching) return null;
+
+  return (
+    <div style={{
+      position: 'fixed',
+      inset: 0,
+      background: 'radial-gradient(circle at center, rgba(10, 16, 28, 0.96) 0%, rgba(3, 5, 10, 0.99) 100%)',
+      backdropFilter: 'blur(24px)',
+      WebkitBackdropFilter: 'blur(24px)',
+      zIndex: 99999,
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '24px',
+      overflow: 'hidden'
+    }}>
+      {/* Dynamic Laser Warp Line */}
+      <div style={{
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        height: '2px',
+        background: 'linear-gradient(90deg, transparent, #00e5a0, #4da6ff, #9d6eff, transparent)',
+        boxShadow: '0 0 24px #00e5a0',
+        animation: 'laser-glider 1.5s ease-in-out infinite'
+      }} />
+
+      {/* Cyberpunk Grid Background */}
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        backgroundImage: 'linear-gradient(rgba(0, 229, 160, 0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 229, 160, 0.04) 1px, transparent 1px)',
+        backgroundSize: '40px 40px',
+        pointerEvents: 'none'
+      }} />
+
+      {/* Center Quantum Portal Card */}
+      <div className="glass-card" style={{
+        maxWidth: '520px',
+        width: '100%',
+        padding: '36px 32px',
+        background: 'rgba(8, 12, 22, 0.92)',
+        border: '1px solid rgba(0, 229, 160, 0.4)',
+        boxShadow: '0 24px 64px rgba(0, 0, 0, 0.9), 0 0 40px rgba(0, 229, 160, 0.2)',
+        borderRadius: '20px',
+        textAlign: 'center',
+        position: 'relative',
+        zIndex: 10
+      }}>
+        {/* Holographic Rotating Core */}
+        <div style={{
+          width: '90px',
+          height: '90px',
+          margin: '0 auto 20px auto',
+          position: 'relative',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          {/* Outer Dashed Ring */}
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            borderRadius: '50%',
+            border: '2px dashed rgba(0, 229, 160, 0.6)',
+            animation: 'radar-sweep 5s linear infinite'
+          }} />
+          {/* Middle Cyan Ring */}
+          <div style={{
+            position: 'absolute',
+            inset: '8px',
+            borderRadius: '50%',
+            border: '2px solid transparent',
+            borderTopColor: '#00e5a0',
+            borderBottomColor: '#4da6ff',
+            animation: 'portal-spin 2s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite'
+          }} />
+          {/* Center Glowing CPU Icon */}
+          <div style={{
+            width: '54px',
+            height: '54px',
+            borderRadius: '50%',
+            background: 'rgba(0, 229, 160, 0.1)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 0 20px rgba(0, 229, 160, 0.4)'
+          }}>
+            <Cpu size={26} color="#00e5a0" />
+          </div>
+        </div>
+
+        <div className="font-dm-mono" style={{ fontSize: '11px', color: 'var(--aura-safe)', letterSpacing: '0.14em', marginBottom: '8px' }}>
+          CYBERSHIELD ➔ CODEXA CLOUD BRIDGE
+        </div>
+
+        <h2 className="font-syne" style={{ fontSize: '24px', fontWeight: '800', color: '#fff', margin: '0 0 10px 0', letterSpacing: '-0.02em' }}>
+          CONNECTING TO CODEXA
+        </h2>
+
+        <p className="font-dm-sans" style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '0 0 22px 0', lineHeight: 1.5 }}>
+          Launching autonomous AST static code review, vulnerability assessment, and production audit engine...
+        </p>
+
+        {/* Progress Bar */}
+        <div style={{
+          width: '100%',
+          height: '6px',
+          background: 'rgba(255, 255, 255, 0.08)',
+          borderRadius: '4px',
+          overflow: 'hidden',
+          marginBottom: '12px'
+        }}>
+          <div style={{
+            width: `${progress}%`,
+            height: '100%',
+            background: 'linear-gradient(90deg, #00e5a0, #4da6ff, #9d6eff)',
+            boxShadow: '0 0 14px rgba(0, 229, 160, 0.9)',
+            borderRadius: '4px',
+            transition: 'width 0.4s cubic-bezier(0.16, 1, 0.3, 1)'
+          }} />
+        </div>
+
+        {/* Dynamic Status Stream */}
+        <div style={{
+          background: 'rgba(0, 0, 0, 0.4)',
+          border: '1px solid rgba(255, 255, 255, 0.06)',
+          borderRadius: '8px',
+          padding: '10px 14px',
+          marginBottom: '24px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '4px',
+          textAlign: 'left'
+        }}>
+          <div className="font-dm-mono" style={{ fontSize: '11px', color: '#00e5a0', fontWeight: '600' }}>
+            {stages[stage].text}
+          </div>
+          <div className="font-dm-mono" style={{ fontSize: '9px', color: 'var(--text-muted)' }}>
+            CHANNEL: {stages[stage].code} | {progress}%
+          </div>
+        </div>
+
+        {/* Action Controls */}
+        <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <button
+            onClick={() => onComplete()}
+            className="font-syne"
+            style={{
+              padding: '12px 22px',
+              background: 'var(--aura-safe)',
+              color: '#060a12',
+              fontWeight: '700',
+              fontSize: '12px',
+              borderRadius: '8px',
+              border: 'none',
+              cursor: 'pointer',
+              letterSpacing: '0.04em',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 4px 16px rgba(0, 229, 160, 0.3)'
+            }}
+          >
+            <span>LAUNCH TERMINAL NOW</span>
+            <ExternalLink size={14} color="#060a12" />
+          </button>
+          <button
+            onClick={() => onCancel()}
+            className="font-dm-mono"
+            style={{
+              padding: '12px 18px',
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid var(--border)',
+              color: 'var(--text-secondary)',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '12px'
+            }}
+          >
+            CANCEL
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
 
   const [activeModule, setActiveModule] = useState('dashboard');
@@ -334,14 +563,6 @@ export default function App() {
 
   const triggerCodexaRedirect = () => {
     setLaunchingCodexa(true);
-    setCodexaProgress(15);
-    const p1 = setTimeout(() => setCodexaProgress(65), 200);
-    const p2 = setTimeout(() => setCodexaProgress(100), 450);
-    const p3 = setTimeout(() => {
-      window.open('https://codexa-ye85.onrender.com', '_blank');
-      setLaunchingCodexa(false);
-      setCodexaProgress(0);
-    }, 700);
   };
 
 
@@ -494,153 +715,14 @@ export default function App() {
 
       {/* 2. Global sweeping laser scanner */}
       {/* Codexa Agent Cloud Neural Bridge Launch Overlay */}
-      {launchingCodexa && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(5, 7, 14, 0.92)',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
-          zIndex: 9999,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '24px'
-        }}>
-          {/* Gliding laser line */}
-          <div style={{
-            position: 'absolute',
-            left: 0,
-            right: 0,
-            height: '2px',
-            background: 'linear-gradient(90deg, transparent, #00e5a0, transparent)',
-            boxShadow: '0 0 20px #00e5a0',
-            animation: 'laser-glider 1.8s ease-in-out infinite'
-          }} />
-
-          {/* Central Portal Card */}
-          <div className="glass-card" style={{
-            maxWidth: '520px',
-            width: '100%',
-            padding: '36px',
-            background: 'rgba(10, 16, 28, 0.98)',
-            border: '1px solid rgba(0, 229, 160, 0.5)',
-            boxShadow: '0 0 50px rgba(0, 229, 160, 0.25)',
-            borderRadius: '16px',
-            textAlign: 'center',
-            position: 'relative'
-          }}>
-            {/* Spinning Holographic Portal Icon */}
-            <div style={{
-              width: '80px',
-              height: '80px',
-              margin: '0 auto 24px auto',
-              position: 'relative',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <div style={{
-                position: 'absolute',
-                width: '100%',
-                height: '100%',
-                borderRadius: '50%',
-                border: '2px dashed rgba(0, 229, 160, 0.5)',
-                animation: 'radar-sweep 4s linear infinite'
-              }} />
-              <div style={{
-                position: 'absolute',
-                width: '75%',
-                height: '75%',
-                borderRadius: '50%',
-                border: '2px solid transparent',
-                borderTopColor: '#00e5a0',
-                borderBottomColor: '#00e5a0',
-                animation: 'portal-spin 2s ease-in-out infinite'
-              }} />
-              <div style={{ fontSize: '32px', filter: 'drop-shadow(0 0 10px #00e5a0)' }}>⚡</div>
-            </div>
-
-            <div className="font-dm-mono" style={{ fontSize: '11px', color: 'var(--aura-safe)', letterSpacing: '0.14em', marginBottom: '8px' }}>
-              SECURE AGENT BRIDGE PROTOCOL
-            </div>
-
-            <h2 className="font-syne" style={{ fontSize: '24px', fontWeight: '800', color: '#fff', margin: '0 0 8px 0' }}>
-              CONNECTING TO CODEXA CLOUD
-            </h2>
-
-            <p className="font-dm-sans" style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '0 0 20px 0', lineHeight: 1.5 }}>
-              Launching live AST Static Security & Production Readiness Terminal at{' '}
-              <span style={{ color: '#00e5a0', fontWeight: '600' }}>codexa-ye85.onrender.com</span>...
-            </p>
-
-            {/* Connecting Beam */}
-            <div style={{ width: '100%', height: '6px', background: 'rgba(255, 255, 255, 0.08)', borderRadius: '3px', overflow: 'hidden', marginBottom: '12px' }}>
-              <div style={{
-                width: `${codexaProgress}%`,
-                height: '100%',
-                background: 'linear-gradient(90deg, #00e5a0, #4da6ff)',
-                boxShadow: '0 0 12px rgba(0, 229, 160, 0.8)',
-                borderRadius: '3px',
-                transition: 'width 0.2s ease-out'
-              }} />
-            </div>
-
-            <div className="font-dm-mono" style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.5)', marginBottom: '24px' }}>
-              TUNNEL STATUS: {codexaProgress}% ESTABLISHED
-            </div>
-
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-              <a
-                href="https://codexa-ye85.onrender.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => setLaunchingCodexa(false)}
-                className="font-syne"
-                style={{
-                  padding: '12px 24px',
-                  background: 'var(--aura-safe)',
-                  color: '#0b0f19',
-                  fontWeight: '700',
-                  fontSize: '12px',
-                  borderRadius: '8px',
-                  textDecoration: 'none',
-                  letterSpacing: '0.04em',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px'
-                }}
-              >
-                <span>OPEN NOW IN NEW TAB</span>
-                <span>➔</span>
-              </a>
-              <button
-                onClick={() => setLaunchingCodexa(false)}
-                className="font-dm-mono"
-                style={{
-                  padding: '12px 18px',
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid var(--border)',
-                  color: 'var(--text-secondary)',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '12px'
-                }}
-              >
-                DISMISS
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {triggerLaser && <div className="laser-scan" style={{ color: auraColor }} onAnimationEnd={() => setTriggerLaser(false)} />}
-
-
+      <CodexaTransitionScreen 
+        launching={launchingCodexa} 
+        onComplete={() => {
+          window.open('https://codexa-ye85.onrender.com', '_blank');
+          setLaunchingCodexa(false);
+        }}
+        onCancel={() => setLaunchingCodexa(false)}
+      />
 
       {/* 3. Left Sidebar navigation (Desktop) / Bottom Navbar navigation (Mobile) */}
 
@@ -1302,6 +1384,10 @@ function ThreatGlobe({ windowWidth, auraColor }) {
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
 
+  const isMobile = windowWidth <= 768;
+  const globeHeight = isMobile ? 310 : 420;
+  const telemetryHeight = isMobile ? 280 : 420;
+
   const [telemetryLogs, setTelemetryLogs] = useState([
     { id: 1, time: "LIVE", tag: "SHIELD", text: "Global 3D Perimeter Vector Grid Online", ip: "103.21.244.0/24", proto: "TLS 1.3", color: "#00e5a0" },
     { id: 2, time: "LIVE", tag: "BLOCKED", text: "DDoS SYN flood dropped at Mumbai edge", ip: "185.86.151.11", proto: "TCP/443", color: "#ff3d5a" },
@@ -1386,8 +1472,9 @@ function ThreatGlobe({ windowWidth, auraColor }) {
     const resize = () => {
       const rect = containerRef.current?.getBoundingClientRect();
       const dpr = window.devicePixelRatio || 1;
-      const w = rect ? rect.width : 500;
-      const h = 420;
+      const isMob = window.innerWidth <= 768;
+      const w = rect ? rect.width : (isMob ? 340 : 500);
+      const h = isMob ? 310 : 420;
 
       canvas.width = w * dpr;
       canvas.height = h * dpr;
@@ -1404,8 +1491,9 @@ function ThreatGlobe({ windowWidth, auraColor }) {
     const draw = () => {
       const ctx = canvas.getContext('2d');
       const rect = containerRef.current?.getBoundingClientRect();
-      const width = rect ? rect.width : 500;
-      const height = 420;
+      const isMob = window.innerWidth <= 768;
+      const width = rect ? rect.width : (isMob ? 340 : 500);
+      const height = isMob ? 310 : 420;
 
       ctx.clearRect(0, 0, width, height);
 
@@ -1415,8 +1503,8 @@ function ThreatGlobe({ windowWidth, auraColor }) {
       }
 
       const centerX = width / 2;
-      const centerY = height / 2;
-      const radius = Math.min(width, height) * 0.38 * state.zoom;
+      const centerY = isMob ? (height / 2 + 10) : (height / 2);
+      const radius = Math.min(width, height) * (isMob ? 0.36 : 0.38) * state.zoom;
 
       const latLongTo3D = (lat, lon) => {
         const phi = (lat * Math.PI) / 180;
@@ -1515,7 +1603,6 @@ function ThreatGlobe({ windowWidth, auraColor }) {
             else { ctx.lineTo(proj.x, proj.y); }
           } else { first = true; }
         }
-        // Highlight Equator with cyan
         if (lat === 0) {
           ctx.strokeStyle = 'rgba(0, 229, 160, 0.4)';
           ctx.lineWidth = 1.2;
@@ -1547,7 +1634,6 @@ function ThreatGlobe({ windowWidth, auraColor }) {
         const pt = latLongTo3D(dot.lat, dot.lon);
         const proj = project(pt);
         if (proj.z >= 0) {
-          // Extra brightness for points facing direct camera
           const depthAlpha = Math.min(1.0, 0.45 + (proj.z / radius) * 0.55);
           ctx.fillStyle = `rgba(0, 229, 160, ${depthAlpha})`;
           ctx.fillRect(proj.x - 1, proj.y - 1, 2.2, 2.2);
@@ -1590,7 +1676,7 @@ function ThreatGlobe({ windowWidth, auraColor }) {
         ctx.strokeStyle = attack.color;
         ctx.stroke();
 
-        // High-vis Blazing Projectile Missile Head
+        // Projectile Missile Head
         const tVal = attack.progress;
         const lx = ptA.x * (1 - tVal) + ptB.x * tVal;
         const ly = ptA.y * (1 - tVal) + ptB.y * tVal;
@@ -1619,7 +1705,6 @@ function ThreatGlobe({ windowWidth, auraColor }) {
 
         attack.progress += attack.speed;
         if (attack.progress >= 1) {
-          // Trigger Impact Shockwave on Target
           state.impacts.push({
             x: ptB.x,
             y: ptB.y,
@@ -1634,7 +1719,7 @@ function ThreatGlobe({ windowWidth, auraColor }) {
 
       state.attacks = state.attacks.filter(a => a.progress < 1);
 
-      // 8. Impact Shockwave Ripples
+      // 8. Impact Shockwaves
       state.impacts.forEach(imp => {
         const proj = project(imp);
         if (proj.z >= 0) {
@@ -1649,13 +1734,12 @@ function ThreatGlobe({ windowWidth, auraColor }) {
       });
       state.impacts = state.impacts.filter(i => i.alpha > 0);
 
-      // 9. Cities and Cyber Operational Nodes
+      // 9. Cities and Operational Nodes
       CITIES.forEach(city => {
         const pt = latLongTo3D(city.lat, city.lon);
         const proj = project(pt);
         if (proj.z >= 0) {
           if (city.isTarget) {
-            // Target Centerpiece: Mumbai HQ with multi-tier pulsing rings
             const breathe = Math.sin(Date.now() / 200) * 4;
 
             ctx.beginPath();
@@ -1678,12 +1762,10 @@ function ThreatGlobe({ windowWidth, auraColor }) {
             ctx.fill();
             ctx.shadowBlur = 0;
 
-            // Target Label Pill
             ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 10px "Space Mono", monospace';
-            ctx.fillText(city.name, proj.x + 14, proj.y + 4);
+            ctx.font = isMob ? 'bold 8px "Space Mono", monospace' : 'bold 10px "Space Mono", monospace';
+            ctx.fillText(isMob ? "MUMBAI HQ" : city.name, proj.x + 12, proj.y + 4);
           } else {
-            // Node points
             ctx.beginPath();
             ctx.arc(proj.x, proj.y, 3, 0, Math.PI * 2);
             ctx.fillStyle = '#ff3d5a';
@@ -1692,9 +1774,11 @@ function ThreatGlobe({ windowWidth, auraColor }) {
             ctx.fill();
             ctx.shadowBlur = 0;
 
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
-            ctx.font = '9px "Space Mono", monospace';
-            ctx.fillText(city.name, proj.x + 8, proj.y + 3);
+            if (!isMob) {
+              ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+              ctx.font = '9px "Space Mono", monospace';
+              ctx.fillText(city.name, proj.x + 8, proj.y + 3);
+            }
           }
         }
       });
@@ -1746,7 +1830,7 @@ function ThreatGlobe({ windowWidth, auraColor }) {
     <div style={{
       display: 'flex',
       flexDirection: windowWidth > 1024 ? 'row' : 'column',
-      gap: '24px',
+      gap: '20px',
       width: '100%',
       alignItems: 'stretch'
     }}>
@@ -1755,14 +1839,16 @@ function ThreatGlobe({ windowWidth, auraColor }) {
         ref={containerRef}
         className="glass-card"
         style={{
-          flex: 1.4,
-          minHeight: '420px',
-          height: '420px',
+          flex: isMobile ? 'none' : 1.4,
+          width: '100%',
+          minHeight: `${globeHeight}px`,
+          height: `${globeHeight}px`,
           padding: 0,
           background: 'radial-gradient(circle at center, rgba(16, 24, 40, 0.7) 0%, rgba(5, 5, 8, 0.95) 100%)',
           position: 'relative',
           cursor: stateRef.current.isDragging ? 'grabbing' : 'grab',
           userSelect: 'none',
+          touchAction: 'none',
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
@@ -1787,15 +1873,17 @@ function ThreatGlobe({ windowWidth, auraColor }) {
       >
         <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block' }} />
 
-        {/* Top Perspective Controls HUD */}
+        {/* Top Perspective Controls HUD - Mobile Responsive */}
         <div style={{
           position: 'absolute',
-          top: '14px',
-          right: '16px',
+          top: isMobile ? '10px' : '14px',
+          right: isMobile ? '10px' : '16px',
+          left: isMobile ? '10px' : 'auto',
+          justifyContent: isMobile ? 'space-between' : 'flex-end',
           display: 'flex',
-          gap: '8px',
+          gap: isMobile ? '6px' : '8px',
           zIndex: 10,
-          flexWrap: 'wrap'
+          flexWrap: 'nowrap'
         }}>
           <button
             onClick={() => focusRegion(0.85, 0.32)}
@@ -1804,14 +1892,15 @@ function ThreatGlobe({ windowWidth, auraColor }) {
               background: 'rgba(0, 229, 160, 0.12)',
               border: '1px solid var(--aura-safe)',
               color: 'var(--aura-safe)',
-              padding: '4px 10px',
+              padding: isMobile ? '4px 8px' : '4px 10px',
               borderRadius: '6px',
-              fontSize: '10px',
+              fontSize: isMobile ? '9px' : '10px',
               fontWeight: '600',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              whiteSpace: 'nowrap'
             }}
           >
-            FOCUS INDIA HQ
+            {isMobile ? 'INDIA' : 'FOCUS INDIA HQ'}
           </button>
           <button
             onClick={() => focusRegion(-1.8, 0.2)}
@@ -1820,13 +1909,14 @@ function ThreatGlobe({ windowWidth, auraColor }) {
               background: 'rgba(255, 255, 255, 0.05)',
               border: '1px solid rgba(255, 255, 255, 0.15)',
               color: '#fff',
-              padding: '4px 10px',
+              padding: isMobile ? '4px 8px' : '4px 10px',
               borderRadius: '6px',
-              fontSize: '10px',
-              cursor: 'pointer'
+              fontSize: isMobile ? '9px' : '10px',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap'
             }}
           >
-            FOCUS AMERICAS
+            {isMobile ? 'AMERICAS' : 'FOCUS AMERICAS'}
           </button>
           <button
             onClick={() => setAutoRotate(!autoRotate)}
@@ -1835,68 +1925,75 @@ function ThreatGlobe({ windowWidth, auraColor }) {
               background: autoRotate ? 'rgba(157, 110, 255, 0.15)' : 'rgba(255, 255, 255, 0.05)',
               border: `1px solid ${autoRotate ? 'var(--aura-purple)' : 'rgba(255, 255, 255, 0.15)'}`,
               color: autoRotate ? 'var(--aura-purple)' : '#fff',
-              padding: '4px 10px',
+              padding: isMobile ? '4px 8px' : '4px 10px',
               borderRadius: '6px',
-              fontSize: '10px',
-              cursor: 'pointer'
+              fontSize: isMobile ? '9px' : '10px',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap'
             }}
           >
-            {autoRotate ? 'AUTO SPIN: ON' : 'AUTO SPIN: PAUSED'}
+            {isMobile ? (autoRotate ? 'SPIN: ON' : 'SPIN: OFF') : (autoRotate ? 'AUTO SPIN: ON' : 'AUTO SPIN: PAUSED')}
           </button>
         </div>
 
-        {/* Bottom Interactive HUD Pill */}
+        {/* Bottom Interactive HUD Pill - Mobile Responsive */}
         <div className="font-dm-mono" style={{
           position: 'absolute',
-          bottom: '12px',
-          left: '16px',
-          fontSize: '10px',
+          bottom: isMobile ? '8px' : '12px',
+          left: isMobile ? '10px' : '16px',
+          fontSize: isMobile ? '9px' : '10px',
           color: 'var(--text-secondary)',
           letterSpacing: '0.08em',
           pointerEvents: 'none',
           display: 'flex',
           alignItems: 'center',
-          gap: '12px',
-          background: 'rgba(5, 5, 8, 0.75)',
-          padding: '6px 14px',
+          gap: isMobile ? '6px' : '12px',
+          background: 'rgba(5, 5, 8, 0.85)',
+          padding: isMobile ? '4px 10px' : '6px 14px',
           borderRadius: '20px',
           border: '1px solid rgba(255, 255, 255, 0.08)',
-          backdropFilter: 'blur(8px)'
+          backdropFilter: 'blur(8px)',
+          maxWidth: 'calc(100% - 20px)'
         }}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--aura-safe)' }}>
-            <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#00e5a0', boxShadow: '0 0 8px #00e5a0' }} />
-            GEO-VECTOR RADAR ACTIVE
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#00e5a0', boxShadow: '0 0 6px #00e5a0' }} />
+            {isMobile ? '3D RADAR ACTIVE' : 'GEO-VECTOR RADAR ACTIVE'}
           </span>
-          <span style={{ color: 'var(--text-muted)' }}>|</span>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-            <Move size={12} color="var(--text-muted)" /> DRAG TO ROTATE
-          </span>
+          {!isMobile && (
+            <>
+              <span style={{ color: 'var(--text-muted)' }}>|</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                <Move size={12} color="var(--text-muted)" /> DRAG TO ROTATE
+              </span>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Synchronized Cyber Telemetry Stream */}
+      {/* Synchronized Cyber Telemetry Stream - Mobile Responsive */}
       <div 
         className="glass-card"
         style={{
-          flex: 1,
-          height: '420px',
+          flex: isMobile ? 'none' : 1,
+          width: '100%',
+          height: `${telemetryHeight}px`,
           display: 'flex',
           flexDirection: 'column',
-          padding: '20px 24px',
+          padding: isMobile ? '16px' : '20px 24px',
           position: 'relative',
           background: 'rgba(9, 9, 13, 0.85)',
           border: '1px solid rgba(255, 255, 255, 0.08)'
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', borderBottom: '1px solid rgba(255, 255, 255, 0.06)', paddingBottom: '12px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', borderBottom: '1px solid rgba(255, 255, 255, 0.06)', paddingBottom: '10px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Activity size={16} color="var(--aura-safe)" />
-            <span className="font-dm-mono" style={{ fontSize: '11px', fontWeight: '700', color: '#fff', letterSpacing: '0.1em' }}>
-              REAL-TIME ATTACK TELEMETRY
+            <Activity size={15} color="var(--aura-safe)" />
+            <span className="font-dm-mono" style={{ fontSize: isMobile ? '10px' : '11px', fontWeight: '700', color: '#fff', letterSpacing: '0.08em' }}>
+              ATTACK TELEMETRY
             </span>
           </div>
-          <div className="font-dm-mono" style={{ fontSize: '10px', background: 'rgba(0, 229, 160, 0.1)', color: 'var(--aura-safe)', padding: '2px 8px', borderRadius: '12px', border: '1px solid var(--aura-safe)' }}>
-            {threatCount} EVENTS LOGGED
+          <div className="font-dm-mono" style={{ fontSize: '9px', background: 'rgba(0, 229, 160, 0.1)', color: 'var(--aura-safe)', padding: '2px 8px', borderRadius: '12px', border: '1px solid var(--aura-safe)' }}>
+            {threatCount} EVENTS
           </div>
         </div>
 
@@ -1916,11 +2013,11 @@ function ThreatGlobe({ windowWidth, auraColor }) {
                 background: 'rgba(255, 255, 255, 0.02)',
                 border: '1px solid rgba(255, 255, 255, 0.05)',
                 borderLeft: `3px solid ${log.color}`,
-                padding: '8px 12px',
+                padding: '8px 10px',
                 borderRadius: '6px',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '4px'
+                gap: '3px'
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1931,11 +2028,11 @@ function ThreatGlobe({ windowWidth, auraColor }) {
                   {log.time}
                 </span>
               </div>
-              <div className="font-dm-sans text-wrap-safe" style={{ fontSize: '12px', color: 'var(--text-primary)', lineHeight: '1.3' }}>
+              <div className="font-dm-sans text-wrap-safe" style={{ fontSize: isMobile ? '11px' : '12px', color: 'var(--text-primary)', lineHeight: '1.3' }}>
                 {log.text}
               </div>
-              <div className="font-dm-mono" style={{ fontSize: '9px', color: 'var(--text-muted)' }}>
-                ORIGIN IP: {log.ip}
+              <div className="font-dm-mono" style={{ fontSize: '8px', color: 'var(--text-muted)' }}>
+                ORIGIN: {log.ip}
               </div>
             </div>
           ))}
@@ -2372,51 +2469,23 @@ function DashboardModule({ windowWidth, auraColor, riskScore, setRiskScore }) {
 
           </div>
 
-          <button 
-
-            onClick={async () => {
-
-              try {
-
-                const res = await fetch('/api/health');
-
-                const data = await res.json();
-
-                setBackendHealth(data.status === 'ok' ? 'ONLINE' : 'ERROR');
-
-              } catch (e) {
-
-                setBackendHealth('OFFLINE');
-
-              }
-
-            }}
-
+          <div 
             className="font-dm-mono"
-
             style={{
-
-              background: backendHealth === 'ONLINE' ? 'rgba(0, 229, 160, 0.1)' : 'rgba(255, 255, 255, 0.05)',
-
-              border: `1px solid ${backendHealth === 'ONLINE' ? 'var(--aura-safe)' : 'rgba(255,255,255,0.1)'}`,
-
-              color: backendHealth === 'ONLINE' ? 'var(--aura-safe)' : '#fff',
-
-              padding: '6px 12px',
-
-              borderRadius: '4px',
-
+              background: 'rgba(0, 229, 160, 0.08)',
+              border: '1px solid rgba(0, 229, 160, 0.3)',
+              color: 'var(--aura-safe)',
+              padding: '4px 10px',
+              borderRadius: '20px',
               fontSize: '10px',
-
-              cursor: 'pointer'
-
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px'
             }}
-
           >
-
-            {backendHealth ? `BACKEND: ${backendHealth}` : 'TEST FASTAPI BACKEND'}
-
-          </button>
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#00e5a0', boxShadow: '0 0 6px #00e5a0' }} />
+            API ENGINE: ONLINE
+          </div>
 
         </div>
 

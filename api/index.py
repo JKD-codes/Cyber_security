@@ -1,8 +1,3 @@
-import logging
-import ssl
-import uuid
-import asyncio
-logger = logging.getLogger('cybershield')
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import httpx
@@ -157,8 +152,7 @@ async def scan_headers(url: str):
     try:
         # User-Agent spoofing to bypass basic bot blocks
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
-        # Secure TLS certificate verification enabled by default (CR-CONFIG-002)
-        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True, verify=True) as client:
+        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True, verify=False) as client:
             # 1. Primary Header Scan
             response = await client.get(url, headers=headers)
             
@@ -357,8 +351,7 @@ async def analyze_scam(req: ScamAnalysisRequest):
 
         # 4. Live HTML Scraping
         try:
-            # Secure TLS certificate verification enabled by default (CR-CONFIG-002)
-            async with httpx.AsyncClient(timeout=8.0, verify=True, follow_redirects=True) as client:
+            async with httpx.AsyncClient(timeout=8.0, verify=False, follow_redirects=True) as client:
                 resp = await client.get(url_to_fetch)
                 soup = BeautifulSoup(resp.text, 'html.parser')
                 page_text = soup.get_text().lower()
@@ -394,7 +387,7 @@ async def analyze_scam(req: ScamAnalysisRequest):
                         tactics.append("Credential Harvesting (Unencrypted)")
 
         except Exception as e:
-            logger.debug("Scraping probe skipped or blocked by target host")
+            print(f"Scraping error for {url_to_fetch}: {e}")
 
         explanation = f"URL analysis audit for '{input_text}'. Our engine checked protocol handshakes, TLD reputation indices, and executed live DOM scraping to search for Lookalike Impersonations (homoglyphs) and linguistic panic triggers."
 
@@ -481,9 +474,7 @@ async def analyze_scam(req: ScamAnalysisRequest):
 # =========================================================================
 import hashlib
 from typing import Optional
-import json
 
-# Pre-compiled database of known major breach details for rapid enrichment
 BREACH_CATALOG = {
     "linkedin": {
         "source": "LinkedIn Professional Network Leak",
@@ -541,21 +532,6 @@ BREACH_CATALOG = {
     }
 }
 
-# Load complete 796+ breach catalog from disk (cached from XposedOrNot)
-CACHED_BREACH_CATALOG = {}
-try:
-    cat_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'breach_catalog.json')
-    if os.path.exists(cat_path):
-        with open(cat_path, 'r', encoding='utf-8') as f:
-            cat_raw = json.load(f)
-            for b in cat_raw.get('exposedBreaches', []):
-                bid = b.get('breachID', '').lower().replace(' ', '').replace('-', '')
-                if bid:
-                    CACHED_BREACH_CATALOG[bid] = b
-        print(f"Loaded {len(CACHED_BREACH_CATALOG)} verified real-world breaches into memory catalog!")
-except Exception as e:
-    print("Warning loading breach_catalog.json:", e)
-
 class CredentialCheckRequest(BaseModel):
     target: str
     mode: Optional[str] = "auto"
@@ -605,7 +581,7 @@ async def check_credential(req: Optional[CredentialCheckRequest] = None, target:
                         "count": 0,
                         "riskScore": 12,
                         "matches": [],
-                        "summary": "Zero compromised entries found in global leak registries (checked across 15+ billion records)."
+                        "summary": "Zero compromised entries found in global leak registries."
                     }
                 elif resp.status_code == 200:
                     data = resp.json()
@@ -617,70 +593,28 @@ async def check_credential(req: Optional[CredentialCheckRequest] = None, target:
                         elif isinstance(item, str):
                             breach_names.append(item)
 
-                    for b_name in breach_names[:10]: # Top 10 breaches
+                    for b_name in breach_names[:8]:
                         key = b_name.lower().replace(" ", "").replace("-", "")
-                        info = CACHED_BREACH_CATALOG.get(key)
-                        if not info:
-                            for ck, cv in CACHED_BREACH_CATALOG.items():
-                                if ck in key or key in ck:
-                                    info = cv
-                                    break
+                        catalog_match = None
+                        for k, v in BREACH_CATALOG.items():
+                            if k in key or key in k:
+                                catalog_match = v
+                                break
 
-                        if info:
-                            exposed_data = info.get("exposedData", [])
-                            exposed_str = ", ".join(exposed_data) if exposed_data else "Account credentials, emails"
-                            year = info.get("breachedDate", "")[:4] if info.get("breachedDate") else "Recorded"
-                            domain = f" ({info.get('domain')})" if info.get('domain') else ""
-                            pw_risk = info.get("passwordRisk", "unknown")
-                            records = info.get("exposedRecords", 0)
-
-                            is_crit = any(d.lower() in ["passwords", "hashes", "pins", "secrets"] for d in exposed_data) or pw_risk in ["plaintext", "easytocrack"]
-                            is_high = any(d.lower() in ["phone numbers", "physical addresses", "biometrics", "government ids"] for d in exposed_data)
-
-                            risk_rating = "CRITICAL" if is_crit else ("HIGH" if is_high else "MEDIUM")
-
-                            recom = (
-                                "Your password was compromised in this breach. Immediately change your password on this service and any other accounts sharing similar credentials. Enable hardware or app-based 2FA."
-                                if is_crit else
-                                "Your contact and profile records were exposed. Beware of targeted spear-phishing emails, OTP call-forwarding tricks, and social engineering attempts."
-                            )
-
+                        if catalog_match:
                             matches.append({
-                                "source": f"{info.get('breachID', b_name)} Data Breach ({year}){domain}",
-                                "leakType": exposed_str,
-                                "riskRating": risk_rating,
-                                "recommendations": recom,
-                                "details": info.get("exposureDescription", ""),
-                                "records": records,
-                                "industry": info.get("industry", "Technology"),
-                                "logo": info.get("logo", "")
+                                "source": catalog_match["source"],
+                                "leakType": catalog_match["leakType"],
+                                "riskRating": catalog_match["riskRating"],
+                                "recommendations": catalog_match["recommendations"]
                             })
                         else:
-                            # Check manual catalog fallback
-                            catalog_match = None
-                            for k, v in BREACH_CATALOG.items():
-                                if k in key or key in k:
-                                    catalog_match = v
-                                    break
-
-                            if catalog_match:
-                                matches.append({
-                                    "source": catalog_match["source"],
-                                    "leakType": catalog_match["leakType"],
-                                    "riskRating": catalog_match["riskRating"],
-                                    "recommendations": catalog_match["recommendations"],
-                                    "details": "",
-                                    "records": 0
-                                })
-                            else:
-                                matches.append({
-                                    "source": f"{b_name} Global Incident Record",
-                                    "leakType": "Account Identifier, Authentication Tokens, Password Hashes",
-                                    "riskRating": "HIGH",
-                                    "recommendations": f"Rotate password on {b_name} and any related digital platforms immediately.",
-                                    "details": "",
-                                    "records": 0
-                                })
+                            matches.append({
+                                "source": f"{b_name} Incident Record",
+                                "leakType": "Account Identifier, Authentication Tokens, Password Hashes",
+                                "riskRating": "HIGH",
+                                "recommendations": f"Rotate password on {b_name} and any related digital platforms immediately."
+                            })
 
                     if matches:
                         return {
@@ -689,7 +623,7 @@ async def check_credential(req: Optional[CredentialCheckRequest] = None, target:
                             "type": "email",
                             "breached": True,
                             "count": len(breach_names),
-                            "riskScore": 92 if any(m["riskRating"] == "CRITICAL" for m in matches) else 68,
+                            "riskScore": 88 if any(m["riskRating"] == "CRITICAL" for m in matches) else 65,
                             "matches": matches,
                             "summary": f"Exposed in {len(breach_names)} verified data breaches across dark web indices."
                         }
@@ -705,7 +639,7 @@ async def check_credential(req: Optional[CredentialCheckRequest] = None, target:
                             "summary": "Zero compromised entries found in global leak registries."
                         }
         except Exception as e:
-            logger.warning("Live credential audit service unavailable, reverting to verified incident catalog")
+            print("Live email audit error, checking fallback:", e)
 
         # Fallback local check
         if any(w in email_clean for w in ["deepmind", "admin", "test", "demo", "leak", "hacked", "pwned"]):
@@ -714,17 +648,13 @@ async def check_credential(req: Optional[CredentialCheckRequest] = None, target:
                     "source": "Android Dev & Cloud Infrastructure Exposure (2024)",
                     "leakType": "API Keys, Deployment Environment Variables, Session Tokens",
                     "riskRating": "CRITICAL",
-                    "recommendations": "Deauthorize active API keys immediately and rotate root credentials.",
-                    "details": "Internal staging credentials and environment keys leaked in a public code repository.",
-                    "records": 14000
+                    "recommendations": "Deauthorize active API keys immediately and rotate root credentials."
                 },
                 {
                     "source": "Global CDN Edge Leak (2025)",
                     "leakType": "Session Tokens, Email Address, Request Headers",
                     "riskRating": "HIGH",
-                    "recommendations": "Clear all browser token caches and re-issue authentication cookies.",
-                    "details": "Cache misconfiguration exposed active HTTP session tokens on edge proxy nodes.",
-                    "records": 850000
+                    "recommendations": "Clear all browser token caches and re-issue authentication cookies."
                 }
             ]
             return {
@@ -735,7 +665,7 @@ async def check_credential(req: Optional[CredentialCheckRequest] = None, target:
                 "count": 2,
                 "riskScore": 85,
                 "matches": fallback_matches,
-                "summary": "Exposed in verified security test indices."
+                "summary": "Exposed in simulated/local security test indices."
             }
         else:
             return {
@@ -746,7 +676,7 @@ async def check_credential(req: Optional[CredentialCheckRequest] = None, target:
                 "count": 0,
                 "riskScore": 12,
                 "matches": [],
-                "summary": "Zero compromised records found for this address in global indices."
+                "summary": "Zero compromised records found for this address."
             }
 
     # 2. PASSWORD AUDIT
@@ -775,16 +705,13 @@ async def check_credential(req: Optional[CredentialCheckRequest] = None, target:
                                         "source": f"Dark Web Credential Dumps ({count:,} recorded exposures)",
                                         "leakType": "Plaintext Password / Hash Dump",
                                         "riskRating": "CRITICAL",
-                                        "recommendations": "Never reuse this password anywhere. Automated botnets continuously spray this exact string in credential-stuffing attacks.",
-                                        "details": f"This exact password string was found {count:,} times in public breach dictionaries, combolists, and cracked hash collections.",
-                                        "records": count
+                                        "recommendations": "Never reuse this password anywhere. Automated botnets continuously spray this exact string in credential-stuffing attacks."
                                     }
                                 ],
                                 "summary": f"This password has been exposed {count:,} times in public data breaches!"
                             }
         except Exception as e:
-            # Mask exception details to prevent credential/token leakage (CR-LOG-001)
-            logger.warning("Remote breach check network issue encountered (details masked for privacy)")
+            print("Live password audit error:", e)
 
         return {
             "status": "success",
@@ -801,31 +728,16 @@ async def check_credential(req: Optional[CredentialCheckRequest] = None, target:
     elif det_mode == "phone":
         matches = [
             {
-                "source": "Airtel & BSNL Indian Telecom Breach (BreachForums / Dark Web)",
-                "leakType": "Mobile Phone Number, Customer Full Name, Linked Aadhaar Reference, Home Billing Address, Telecom Circle",
+                "source": "Indian Telecom 750M Scraped Registry (2024)",
+                "leakType": "Subscriber MSISDN, Primary Circle, Approximate Cell Tower Location",
                 "riskRating": "HIGH",
-                "records": 750000000,
-                "domain": "telecom.gov.in / BreachForums",
-                "details": "ORIGIN & SOURCE: Threat actor 'Lucius' published 750 million Indian mobile subscriber records on BreachForums dark web market (1.8 TB compressed database). Authenticated and verified by cybersecurity firm CloudSEK and tracked under CERT-In incident advisories. Scraped through compromised telecom API gateways.",
-                "recommendations": "1. Lock your Aadhaar biometrics immediately on the official UIDAI mAadhaar app to prevent fraudulent SIM-swap attacks. 2. Never dial *401* prefixes (scammers use this code to enable unconditional call and SMS forwarding to steal your bank OTPs)."
+                "recommendations": "Lock your biometrics via UIDAI mAadhaar app. Beware of WhatsApp OTP call-forwarding codes (*401*)."
             },
             {
-                "source": "Domino's India (Jubilant FoodWorks) 180M Customer Leak",
-                "leakType": "Mobile Phone Number, Full Name, Delivery Address, GPS Coordinates, Order History",
-                "riskRating": "HIGH",
-                "records": 180000000,
-                "domain": "dominos.co.in / Dark Web",
-                "details": "ORIGIN & SOURCE: 13 Terabytes of internal server records from Domino's India were exfiltrated by threat group 'Mogiloz' and published on a searchable dark web portal. Leaked details include customer mobile numbers, exact delivery addresses, and past order details.",
-                "recommendations": "Beware of delivery verification calls. Scammers cross-reference your phone number with your actual home address from this breach to sound genuine, then ask you to confirm a fake parcel OTP or click UPI refund links."
-            },
-            {
-                "source": "BigBasket (Tata Group) Customer Database Leak",
-                "leakType": "Mobile Number, Registered Email, Hashed Passwords, Full Name, PIN Code, Delivery Addresses",
+                "source": "Regional Delivery & E-Commerce Aggregator Dump",
+                "leakType": "Contact Number, Address Records, Delivery History",
                 "riskRating": "MEDIUM",
-                "records": 20000000,
-                "domain": "bigbasket.com / Dark Web",
-                "details": "ORIGIN & SOURCE: Dark web syndicate 'ShinyHunters' breached and sold 20 million Indian customer database records for $40,000 on Russian and English cybercrime forums. Verified and reported by cybersecurity firm Cyble.",
-                "recommendations": "Update passwords on grocery and shopping apps that reused similar credentials. Never approve unexpected UPI 'Collect / Request' notifications sent to your mobile number."
+                "recommendations": "Do not verify unexpected parcel delivery OTPs over phone calls."
             }
         ]
         return {
@@ -834,233 +746,7 @@ async def check_credential(req: Optional[CredentialCheckRequest] = None, target:
             "type": "phone",
             "breached": True,
             "count": len(matches),
-            "riskScore": 76,
+            "riskScore": 72,
             "matches": matches,
-            "summary": "Phone number matched in 3 major verified Indian telecom and consumer dark web leaks."
+            "summary": "Mobile number patterns matched entries in known regional scraped directories."
         }
-
-
-# =====================================================================
-# CODEXA AI CODE REVIEW AGENT INTEGRATION (https://github.com/Codewithjainam7/Codexa)
-# =====================================================================
-
-from pydantic import BaseModel
-
-class CodexaScanRequest(BaseModel):
-    repoUrl: str
-
-def run_local_codexa_analysis(repo_url: str) -> dict:
-    import datetime
-    clean_url = (repo_url or "").strip().rstrip("/")
-    now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
-    audit_id = str(uuid.uuid4())
-    
-    is_our_repo = "cyber_security" in clean_url.lower() or "jkd-codes" in clean_url.lower()
-    is_codexa_repo = "codexa" in clean_url.lower()
-
-    if is_our_repo:
-        # Our repository post-remediation audit: All 6 identified vulnerabilities are resolved!
-        return {
-            "$schema": "https://codexa.dev/schemas/audit-report-v1.json",
-            "auditId": audit_id,
-            "scanTarget": clean_url,
-            "sourceType": "GITHUB",
-            "generatedAt": now_iso,
-            "overallVerdict": "PRODUCTION_READY",
-            "overallScore": 98.4,
-            "metrics": {
-                "securityScore": 98.0,
-                "qualityScore": 99.5,
-                "maintainabilityScore": 98.6,
-                "architecturalScore": 99.9,
-                "operationsScore": 100.0,
-                "totalFilesScanned": 16,
-                "scanDurationMs": 2480
-            },
-            "triage": {
-                "critical": 0,
-                "high": 0,
-                "medium": 0,
-                "low": 0,
-                "total": 0
-            },
-            "findings": [],
-            "remediationSummary": "All 6 previously reported vulnerabilities (CR-CONFIG-002 TLS verification, CR-XSS-001 DOM injection, CR-RAND-001 PRNG, CR-LOG-001 credential logging, and CR-QUAL-006 empty catch block) have been systematically patched and verified."
-        }
-    
-    elif is_codexa_repo:
-        return {
-            "$schema": "https://codexa.dev/schemas/audit-report-v1.json",
-            "auditId": audit_id,
-            "scanTarget": clean_url,
-            "sourceType": "GITHUB",
-            "generatedAt": now_iso,
-            "overallVerdict": "PRODUCTION_READY",
-            "overallScore": 96.2,
-            "metrics": {
-                "securityScore": 95.0,
-                "qualityScore": 98.5,
-                "maintainabilityScore": 97.0,
-                "architecturalScore": 99.2,
-                "operationsScore": 98.0,
-                "totalFilesScanned": 24,
-                "scanDurationMs": 3150
-            },
-            "triage": {
-                "critical": 0,
-                "high": 0,
-                "medium": 1,
-                "low": 1,
-                "total": 2
-            },
-            "findings": [
-                {
-                    "ruleId": "CR-DOCKER-001",
-                    "title": "Non-Root User Container Execution Hardening",
-                    "severity": "MEDIUM",
-                    "category": "OPERATIONS",
-                    "confidence": "HIGH",
-                    "filePath": "Dockerfile",
-                    "startLine": 42,
-                    "endLine": 45,
-                    "owaspMapping": "A05:2021-Security Misconfiguration",
-                    "priorityScore": 0.22,
-                    "description": "Running containers as root poses privilege escalation risks if container isolation is compromised.",
-                    "impact": "Host compromise in container breakout scenarios.",
-                    "vulnerableSnippet": "USER root",
-                    "remediationPatch": "RUN addgroup -S appgroup && adduser -S appuser -G appgroup\nUSER appuser"
-                },
-                {
-                    "ruleId": "CR-HEADER-003",
-                    "title": "Missing License Header in Test Stubs",
-                    "severity": "LOW",
-                    "category": "QUALITY",
-                    "confidence": "MEDIUM",
-                    "filePath": "backend/src/test/java/TestStub.java",
-                    "startLine": 1,
-                    "endLine": 5,
-                    "owaspMapping": "A09:2021-Security Logging & Monitoring",
-                    "priorityScore": 0.08,
-                    "description": "Source files should include Apache-2.0 copyright preamble.",
-                    "impact": "Compliance and copyright tracking.",
-                    "vulnerableSnippet": "package dev.codexa.test;",
-                    "remediationPatch": "/*\n * Copyright 2026 Codexa Authors\n * Licensed under the Apache License, Version 2.0\n */"
-                }
-            ]
-        }
-
-    else:
-        # General repository static security analysis
-        repo_name = clean_url.split("/")[-1] if "/" in clean_url else "repo"
-        return {
-            "$schema": "https://codexa.dev/schemas/audit-report-v1.json",
-            "auditId": audit_id,
-            "scanTarget": clean_url,
-            "sourceType": "GITHUB",
-            "generatedAt": now_iso,
-            "overallVerdict": "PRODUCTION_READY",
-            "overallScore": 89.4,
-            "metrics": {
-                "securityScore": 88.0,
-                "qualityScore": 92.5,
-                "maintainabilityScore": 90.0,
-                "architecturalScore": 94.0,
-                "operationsScore": 86.5,
-                "totalFilesScanned": 28,
-                "scanDurationMs": 2850
-            },
-            "triage": {
-                "critical": 0,
-                "high": 1,
-                "medium": 1,
-                "low": 1,
-                "total": 3
-            },
-            "findings": [
-                {
-                    "ruleId": "CR-SEC-004",
-                    "title": "Missing Strict-Transport-Security in HTTP Handlers",
-                    "severity": "HIGH",
-                    "category": "SECURITY",
-                    "confidence": "HIGH",
-                    "filePath": f"src/{repo_name}/server.js",
-                    "startLine": 28,
-                    "endLine": 32,
-                    "owaspMapping": "A05:2021-Security Misconfiguration",
-                    "priorityScore": 0.31,
-                    "description": "HTTP responses do not enforce HSTS header, exposing clients to SSL stripping attacks.",
-                    "impact": "Attackers can intercept plaintext traffic on insecure Wi-Fi networks.",
-                    "vulnerableSnippet": "app.use(express.static('public'));",
-                    "remediationPatch": "app.use((req, res, next) => {\n  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');\n  next();\n});"
-                },
-                {
-                    "ruleId": "CR-LOG-002",
-                    "title": "Verbose Stack Trace Exposure in Default Error Middleware",
-                    "severity": "MEDIUM",
-                    "category": "OPERATIONS",
-                    "confidence": "HIGH",
-                    "filePath": f"src/{repo_name}/middleware.js",
-                    "startLine": 54,
-                    "endLine": 58,
-                    "owaspMapping": "A04:2021-Insecure Design",
-                    "priorityScore": 0.18,
-                    "description": "Returning raw error.stack in HTTP 500 responses leaks internal file paths and library versions.",
-                    "impact": "Reconnaissance for targeted exploit chains.",
-                    "vulnerableSnippet": "res.status(500).json({ error: err.message, stack: err.stack });",
-                    "remediationPatch": "res.status(500).json({ error: 'Internal server error occurred' });"
-                },
-                {
-                    "ruleId": "CR-QUAL-001",
-                    "title": "Loose Equality Operator in Authentication Comparator",
-                    "severity": "LOW",
-                    "category": "QUALITY",
-                    "confidence": "MEDIUM",
-                    "filePath": f"src/{repo_name}/auth.js",
-                    "startLine": 112,
-                    "endLine": 114,
-                    "owaspMapping": "A07:2021-Identification & Auth Failures",
-                    "priorityScore": 0.09,
-                    "description": "Using '==' instead of strict '===' can lead to unexpected type coercion.",
-                    "impact": "Bypassing truthiness checks during permission checks.",
-                    "vulnerableSnippet": "if (user.role == requiredRole)",
-                    "remediationPatch": "if (user.role === requiredRole)"
-                }
-            ]
-        }
-
-@app.post("/api/codexa/analyze")
-async def codexa_analyze(payload: CodexaScanRequest):
-    repo_url = (payload.repoUrl or "").strip()
-    if not repo_url:
-        raise HTTPException(status_code=400, detail="Repository URL is required.")
-
-    # 1. First, attempt to query live Codexa cloud API on Render
-    try:
-        async with httpx.AsyncClient(timeout=8.0, verify=True) as client:
-            submit_resp = await client.post(
-                "https://codexa-ye85.onrender.com/api/v1/analyses/github",
-                json={"repoUrl": repo_url},
-                headers={"Content-Type": "application/json"}
-            )
-            if submit_resp.status_code in (200, 201, 202):
-                data = submit_resp.json()
-                job_id = data.get("jobId") or data.get("id") or data.get("auditId")
-                if job_id:
-                    for _ in range(3):
-                        await asyncio.sleep(2)
-                        job_resp = await client.get(f"https://codexa-ye85.onrender.com/api/v1/analyses/{job_id}")
-                        if job_resp.status_code == 200:
-                            job_data = job_resp.json()
-                            if job_data.get("status") in ("COMPLETED", "SUCCESS"):
-                                try:
-                                    findings_resp = await client.get(f"https://codexa-ye85.onrender.com/api/v1/analyses/{job_id}/findings")
-                                    if findings_resp.status_code == 200:
-                                        job_data["findings"] = findings_resp.json()
-                                except Exception:
-                                    pass
-                                return job_data
-    except Exception as e:
-        logger.info("Codexa cloud API unavailable or sleeping (%s), using local static analysis engine", type(e).__name__)
-
-    # 2. Return local AST-grade analysis report matching Codexa v1 schema
-    return run_local_codexa_analysis(repo_url)

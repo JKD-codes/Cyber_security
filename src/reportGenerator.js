@@ -9,6 +9,19 @@
 
 import { jsPDF } from 'jspdf';
 
+
+export function getSecureAuditId(prefix) {
+  let randVal = 100000;
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    const arr = new Uint32Array(1);
+    crypto.getRandomValues(arr);
+    randVal = 100000 + (arr[0] % 900000);
+  } else {
+    randVal = 100000 + Math.floor(Math.random() * 900000);
+  }
+  return `${prefix}-${new Date().getFullYear()}-${randVal}`;
+}
+
 export function cleanHumanText(text) {
   if (!text) return '';
   let cleaned = String(text);
@@ -74,7 +87,7 @@ export function downloadScamAuditPdf(targetInput, result) {
     month: 'long',
     day: 'numeric'
   });
-  const auditId = 'CS-AUD-' + now.getFullYear() + '-' + Math.floor(100000 + Math.random() * 900000);
+  const auditId = getSecureAuditId('CS-AUD');
 
   const cleanInput = (targetInput || '').trim();
   const isUrl = cleanInput.startsWith('http') || (cleanInput.includes('.') && !cleanInput.includes(' '));
@@ -475,7 +488,7 @@ export function downloadSiteSecurityPdf(targetUrl, scanResult) {
     month: 'long',
     day: 'numeric'
   });
-  const scanId = 'CS-SCAN-' + now.getFullYear() + '-' + Math.floor(100000 + Math.random() * 900000);
+  const scanId = getSecureAuditId('CS-SCAN');
 
   const cleanUrl = (targetUrl || scanResult.url || '').trim();
   const grade = scanResult.grade || 'C';
@@ -887,7 +900,7 @@ export function generateScamAuditReport(targetInput, result) {
   const now = new Date();
   const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
-  const auditId = 'CS-AUD-' + now.getFullYear() + '-' + Math.floor(100000 + Math.random() * 900000);
+  const auditId = getSecureAuditId('CS-AUD');
   const cleanInput = (targetInput || '').trim();
   const isUrl = cleanInput.startsWith('http') || (cleanInput.includes('.') && !cleanInput.includes(' '));
   const targetLabel = isUrl ? 'Uniform Resource Locator (URL)' : 'Communication Payload (SMS / Text Message)';
@@ -922,7 +935,7 @@ export function generateSiteSecurityReport(targetUrl, scanResult) {
   const now = new Date();
   const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
-  const scanId = 'CS-SCAN-' + now.getFullYear() + '-' + Math.floor(100000 + Math.random() * 900000);
+  const scanId = getSecureAuditId('CS-SCAN');
   const cleanUrl = (targetUrl || scanResult.url || '').trim();
   const grade = scanResult.grade || 'C';
   const passed = (scanResult.passedChecks || []).map(p => cleanHumanText(p));
@@ -960,14 +973,14 @@ export function triggerReportDownload(filename, textContent) {
 
 export function printReportContent(title, textContent) {
   const printWindow = window.open('', '_blank');
-  if (!printWindow) return;
-  const escaped = textContent.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  printWindow.document.write(`<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>${title}</title>
-  <style>
+  if (!printWindow || !printWindow.document) return;
+  
+  const printDoc = printWindow.document;
+  printDoc.title = String(title || 'CyberShield Audit Report');
+
+  // Secure DOM construction without document.write or raw innerHTML injection (CR-XSS-001)
+  const styleEl = printDoc.createElement('style');
+  styleEl.textContent = `
     @page { margin: 20mm; }
     body {
       font-family: 'Courier New', Courier, monospace;
@@ -983,13 +996,28 @@ export function printReportContent(title, textContent) {
     @media print {
       body { padding: 0; }
     }
-  </style>
-</head>
-<body>${escaped}</body>
-</html>`);
-  printWindow.document.close();
+  `;
+  if (printDoc.head) {
+    printDoc.head.appendChild(styleEl);
+  }
+
+  const preEl = printDoc.createElement('pre');
+  preEl.textContent = String(textContent || '');
+  preEl.style.margin = '0';
+  preEl.style.fontFamily = 'inherit';
+  preEl.style.whiteSpace = 'pre-wrap';
+
+  if (printDoc.body) {
+    printDoc.body.innerHTML = '';
+    printDoc.body.appendChild(preEl);
+  }
+
   printWindow.focus();
   setTimeout(() => {
-    printWindow.print();
+    try {
+      printWindow.print();
+    } catch (e) {
+      console.warn('Print command cancelled or unsupported:', e);
+    }
   }, 300);
 }

@@ -6,7 +6,8 @@ import {
   Activity,
   Cpu,
   ExternalLink,
-  ChevronRight, 
+  ChevronRight,
+  Terminal, 
 
   Search, 
 
@@ -731,9 +732,9 @@ export default function App() {
 
       {!isMobile ? (
         <aside style={{
-          width: '280px',
-          background: 'linear-gradient(180deg, rgba(10, 14, 24, 0.98) 0%, rgba(5, 7, 14, 0.99) 100%)',
-          borderRight: '1px solid rgba(255, 255, 255, 0.07)',
+          width: '290px',
+          background: 'linear-gradient(180deg, rgba(8, 11, 20, 0.98) 0%, rgba(4, 6, 12, 0.99) 100%)',
+          borderRight: '1px solid rgba(255, 255, 255, 0.08)',
           display: 'flex',
           flexDirection: 'column',
           zIndex: 20,
@@ -742,59 +743,121 @@ export default function App() {
           top: 0,
           height: '100vh',
           overflow: 'hidden',
-          boxShadow: '4px 0 24px rgba(0, 0, 0, 0.5)'
+          boxShadow: '6px 0 32px rgba(0, 0, 0, 0.6)'
         }}>
-          {/* Top Brand Logo Area */}
-          <div style={{ padding: '28px 24px 20px 24px', borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
+          {/* Ambient Top Glow Overlay */}
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '120px',
+            background: 'radial-gradient(circle at 20% 0%, rgba(0, 229, 160, 0.12) 0%, transparent 70%)',
+            pointerEvents: 'none'
+          }} />
+
+          {/* Top Brand & System Identity Header */}
+          <div style={{
+            padding: '24px 20px 18px 20px',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+            position: 'relative',
+            zIndex: 2
+          }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              {/* Glowing Shield Hex Icon */}
               <div style={{
-                width: '38px',
-                height: '38px',
-                borderRadius: '10px',
-                background: 'linear-gradient(135deg, rgba(0, 229, 160, 0.2) 0%, rgba(157, 110, 255, 0.15) 100%)',
-                border: '1.5px solid rgba(0, 229, 160, 0.4)',
+                width: '42px',
+                height: '42px',
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, rgba(0, 229, 160, 0.22) 0%, rgba(157, 110, 255, 0.18) 100%)',
+                border: '1.5px solid rgba(0, 229, 160, 0.45)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 0 16px rgba(0, 229, 160, 0.2)'
+                boxShadow: '0 0 20px rgba(0, 229, 160, 0.25), inset 0 0 10px rgba(0, 229, 160, 0.15)',
+                flexShrink: 0
               }}>
-                <Shield size={20} color="var(--aura-safe)" />
+                <Shield size={22} color="var(--aura-safe)" />
               </div>
-              <div>
-                <div className="font-syne" style={{ fontSize: '20px', fontWeight: '800', letterSpacing: '-0.02em', color: '#fff', lineHeight: 1.1 }}>
-                  CyberShield
+
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span className="font-syne" style={{ fontSize: '20px', fontWeight: '800', letterSpacing: '-0.02em', color: '#ffffff', lineHeight: 1.1 }}>
+                    CyberShield
+                  </span>
+                  <span className="font-dm-mono" style={{
+                    fontSize: '8px',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    background: 'rgba(0, 229, 160, 0.12)',
+                    color: 'var(--aura-safe)',
+                    border: '1px solid rgba(0, 229, 160, 0.3)',
+                    fontWeight: '700'
+                  }}>
+                    v4.8 PRO
+                  </span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '5px' }}>
                   <span style={{
                     display: 'inline-block',
                     width: '6px',
                     height: '6px',
-                    background: 'var(--aura-safe)',
+                    background: '#00e5a0',
                     borderRadius: '50%',
-                    boxShadow: '0 0 8px var(--aura-safe)',
+                    boxShadow: '0 0 8px #00e5a0',
                     animation: 'glow-breathe 2s infinite'
                   }} />
-                  <span className="font-dm-mono" style={{ fontSize: '10px', fontWeight: '500', letterSpacing: '0.12em', color: 'var(--aura-safe)' }}>
-                    PERIMETER SECURE
+                  <span className="font-dm-mono" style={{ fontSize: '10px', fontWeight: '600', letterSpacing: '0.08em', color: 'var(--aura-safe)' }}>
+                    PERIMETER HARDENED
                   </span>
                 </div>
               </div>
             </div>
+
+            {/* Micro Cyber Breathing Line */}
+            <div style={{
+              width: '100%',
+              height: '1px',
+              background: 'linear-gradient(90deg, #00e5a0 0%, #4da6ff 50%, transparent 100%)',
+              marginTop: '16px',
+              opacity: 0.6
+            }} />
           </div>
 
-          {/* Navigation Links Scroll Area */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: '22px' }}>
+          {/* Navigation Items Scroll Area */}
+          <div style={{
+            flex: 1,
+            overflowY: 'auto',
+            padding: '18px 14px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '20px',
+            position: 'relative',
+            zIndex: 2
+          }}>
             
-            {/* Section 1: Security Intelligence */}
+            {/* Group 1: Security Intelligence */}
             <div>
-              <div className="font-dm-mono" style={{ fontSize: '9px', fontWeight: '700', color: 'var(--text-muted)', letterSpacing: '0.14em', padding: '0 12px 10px 12px' }}>
-                INTELLIGENCE & AUDIT
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '0 8px 8px 8px'
+              }}>
+                <span className="font-dm-mono" style={{ fontSize: '9px', fontWeight: '700', color: 'rgba(255, 255, 255, 0.4)', letterSpacing: '0.14em' }}>
+                  SECURITY INTELLIGENCE
+                </span>
+                <span className="font-dm-mono" style={{ fontSize: '8px', color: 'rgba(0, 229, 160, 0.7)' }}>
+                  3 ACTIVE
+                </span>
               </div>
+
               <nav style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 {[
-                  { id: 'dashboard', label: 'THREAT CENTER', tag: 'LIVE 3D', Icon: BarChart3 },
-                  { id: 'scam-detector', label: 'LINK & SCAM AUDIT', tag: 'HEURISTIC', Icon: Search },
-                  { id: 'site-scanner', label: 'SITE SECURITY SCANNER', tag: 'SSL/DNS', Icon: Globe }
+                  { id: 'dashboard', label: 'THREAT CENTER', sub: 'Live 3D Attack Radar', tag: '3D LIVE', Icon: BarChart3 },
+                  { id: 'scam-detector', label: 'LINK & SCAM AUDIT', sub: 'Heuristic ML Fraud Engine', tag: 'ML SHIELD', Icon: Search },
+                  { id: 'site-scanner', label: 'SITE SECURITY SCANNER', sub: 'SSL, Headers & Port Audit', tag: 'SCANNER', Icon: Globe }
                 ].map((item) => {
                   const isActive = activeModule === item.id;
                   const NavIcon = item.Icon;
@@ -807,39 +870,57 @@ export default function App() {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        padding: '10px 14px',
+                        padding: '10px 12px',
                         background: isActive 
-                          ? 'linear-gradient(90deg, rgba(0, 229, 160, 0.12) 0%, rgba(77, 166, 255, 0.04) 100%)' 
-                          : 'transparent',
-                        border: isActive ? '1px solid rgba(0, 229, 160, 0.3)' : '1px solid transparent',
-                        borderLeft: isActive ? '3px solid var(--aura-safe)' : '3px solid transparent',
+                          ? 'linear-gradient(90deg, rgba(0, 229, 160, 0.14) 0%, rgba(77, 166, 255, 0.05) 100%)' 
+                          : 'rgba(255, 255, 255, 0.015)',
+                        border: isActive ? '1px solid rgba(0, 229, 160, 0.4)' : '1px solid rgba(255, 255, 255, 0.04)',
+                        borderLeft: isActive ? '3px solid #00e5a0' : '3px solid transparent',
                         borderRadius: '10px',
                         color: isActive ? '#ffffff' : 'var(--text-secondary)',
                         cursor: 'pointer',
                         textAlign: 'left',
-                        fontWeight: isActive ? '600' : '400',
-                        fontSize: '13px',
-                        transition: 'all 0.2s ease',
+                        boxShadow: isActive ? '0 4px 16px rgba(0, 229, 160, 0.15), inset 0 0 12px rgba(0, 229, 160, 0.05)' : 'none',
+                        transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
                         width: '100%'
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <NavIcon size={16} color={isActive ? 'var(--aura-safe)' : 'var(--text-secondary)'} />
-                        <span style={{ letterSpacing: '0.02em' }}>{item.label}</span>
+                        <div style={{
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '8px',
+                          background: isActive ? 'rgba(0, 229, 160, 0.2)' : 'rgba(255, 255, 255, 0.04)',
+                          border: isActive ? '1px solid rgba(0, 229, 160, 0.5)' : '1px solid rgba(255, 255, 255, 0.06)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0
+                        }}>
+                          <NavIcon size={16} color={isActive ? '#00e5a0' : 'var(--text-secondary)'} />
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '13px', fontWeight: isActive ? '700' : '500', color: isActive ? '#fff' : 'var(--text-primary)', letterSpacing: '0.02em', lineHeight: 1.2 }}>
+                            {item.label}
+                          </div>
+                          <div className="font-dm-mono" style={{ fontSize: '9px', color: isActive ? 'rgba(0, 229, 160, 0.85)' : 'var(--text-muted)', marginTop: '2px' }}>
+                            {item.sub}
+                          </div>
+                        </div>
                       </div>
+
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <span className="font-dm-mono" style={{
                           fontSize: '8px',
-                          padding: '2px 6px',
+                          padding: '2px 5px',
                           borderRadius: '4px',
-                          background: isActive ? 'rgba(0, 229, 160, 0.18)' : 'rgba(255, 255, 255, 0.04)',
-                          color: isActive ? 'var(--aura-safe)' : 'var(--text-muted)',
-                          fontWeight: '600',
-                          letterSpacing: '0.04em'
+                          background: isActive ? 'rgba(0, 229, 160, 0.2)' : 'rgba(255, 255, 255, 0.04)',
+                          color: isActive ? '#00e5a0' : 'var(--text-muted)',
+                          fontWeight: '600'
                         }}>
                           {item.tag}
                         </span>
-                        {isActive && <ChevronRight size={13} color="var(--aura-safe)" />}
+                        {isActive && <ChevronRight size={14} color="#00e5a0" />}
                       </div>
                     </button>
                   );
@@ -847,14 +928,25 @@ export default function App() {
               </nav>
             </div>
 
-            {/* Section 2: Neural Agents & Labs */}
+            {/* Group 2: Neural Agents & Labs */}
             <div>
-              <div className="font-dm-mono" style={{ fontSize: '9px', fontWeight: '700', color: 'var(--text-muted)', letterSpacing: '0.14em', padding: '0 12px 10px 12px' }}>
-                NEURAL AGENTS & LABS
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '0 8px 8px 8px'
+              }}>
+                <span className="font-dm-mono" style={{ fontSize: '9px', fontWeight: '700', color: 'rgba(255, 255, 255, 0.4)', letterSpacing: '0.14em' }}>
+                  NEURAL AGENTS & LABS
+                </span>
+                <span className="font-dm-mono" style={{ fontSize: '8px', color: 'var(--aura-purple)' }}>
+                  AUTONOMOUS
+                </span>
               </div>
+
               <nav style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 
-                {/* Special Highlight: Codexa AI Agent Button */}
+                {/* HERO FEATURED BUTTON: Codexa Autonomous AI Agent */}
                 <button
                   onClick={() => triggerCodexaRedirect()}
                   className="font-dm-sans"
@@ -863,15 +955,13 @@ export default function App() {
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     padding: '12px 14px',
-                    background: 'linear-gradient(135deg, rgba(157, 110, 255, 0.14) 0%, rgba(0, 229, 160, 0.08) 100%)',
-                    border: '1px solid rgba(157, 110, 255, 0.45)',
-                    borderRadius: '10px',
+                    background: 'linear-gradient(135deg, rgba(157, 110, 255, 0.18) 0%, rgba(0, 229, 160, 0.08) 100%)',
+                    border: '1.5px solid rgba(157, 110, 255, 0.55)',
+                    borderRadius: '12px',
                     color: '#ffffff',
                     cursor: 'pointer',
                     textAlign: 'left',
-                    fontWeight: '600',
-                    fontSize: '13px',
-                    boxShadow: '0 4px 16px rgba(157, 110, 255, 0.15)',
+                    boxShadow: '0 6px 20px rgba(157, 110, 255, 0.2), inset 0 0 14px rgba(157, 110, 255, 0.1)',
                     transition: 'all 0.25s ease',
                     width: '100%',
                     position: 'relative',
@@ -879,33 +969,49 @@ export default function App() {
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <Cpu size={16} color="var(--aura-purple)" />
+                    <div style={{
+                      width: '34px',
+                      height: '34px',
+                      borderRadius: '8px',
+                      background: 'rgba(157, 110, 255, 0.25)',
+                      border: '1px solid rgba(157, 110, 255, 0.6)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 0 12px rgba(157, 110, 255, 0.4)',
+                      flexShrink: 0
+                    }}>
+                      <Cpu size={18} color="#c084fc" />
+                    </div>
                     <div>
-                      <div style={{ letterSpacing: '0.02em', color: '#fff', fontSize: '13px', fontWeight: '700' }}>
+                      <div style={{ fontSize: '13px', fontWeight: '800', color: '#ffffff', letterSpacing: '0.02em', lineHeight: 1.2 }}>
                         CODEXA CODE REVIEW
                       </div>
-                      <div className="font-dm-mono" style={{ fontSize: '9px', color: 'var(--aura-purple)', marginTop: '2px' }}>
-                        AST Security Agent ↗
+                      <div className="font-dm-mono" style={{ fontSize: '9px', color: '#c084fc', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span>AST Neural Agent</span>
+                        <span>↗</span>
                       </div>
                     </div>
                   </div>
+
                   <span className="font-dm-mono" style={{
                     fontSize: '8px',
                     padding: '3px 7px',
-                    borderRadius: '4px',
-                    background: 'rgba(157, 110, 255, 0.25)',
-                    color: 'var(--aura-purple)',
+                    borderRadius: '5px',
+                    background: 'rgba(157, 110, 255, 0.3)',
+                    color: '#ffffff',
                     fontWeight: '700',
+                    border: '1px solid rgba(157, 110, 255, 0.5)',
                     letterSpacing: '0.05em'
                   }}>
-                    AI AGENT
+                    AI CORE
                   </span>
                 </button>
 
-                {/* Labs and Family */}
+                {/* Labs & Family Shield */}
                 {[
-                  { id: 'simulator', label: 'ATTACK LABS', tag: 'SANDBOX', Icon: FlaskConical },
-                  { id: 'family-safety', label: 'FAMILY SHIELD', tag: 'GUARDIAN', Icon: Shield }
+                  { id: 'simulator', label: 'ATTACK LABS', sub: 'Exploit Simulation Sandbox', tag: 'SANDBOX', Icon: FlaskConical },
+                  { id: 'family-safety', label: 'FAMILY SHIELD', sub: 'Device & Endpoint Guardian', tag: 'GUARDIAN', Icon: Shield }
                 ].map((item) => {
                   const isActive = activeModule === item.id;
                   const NavIcon = item.Icon;
@@ -918,38 +1024,57 @@ export default function App() {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        padding: '10px 14px',
+                        padding: '10px 12px',
                         background: isActive 
-                          ? 'linear-gradient(90deg, rgba(0, 229, 160, 0.12) 0%, rgba(77, 166, 255, 0.04) 100%)' 
-                          : 'transparent',
-                        border: isActive ? '1px solid rgba(0, 229, 160, 0.3)' : '1px solid transparent',
-                        borderLeft: isActive ? '3px solid var(--aura-safe)' : '3px solid transparent',
+                          ? 'linear-gradient(90deg, rgba(0, 229, 160, 0.14) 0%, rgba(77, 166, 255, 0.05) 100%)' 
+                          : 'rgba(255, 255, 255, 0.015)',
+                        border: isActive ? '1px solid rgba(0, 229, 160, 0.4)' : '1px solid rgba(255, 255, 255, 0.04)',
+                        borderLeft: isActive ? '3px solid #00e5a0' : '3px solid transparent',
                         borderRadius: '10px',
                         color: isActive ? '#ffffff' : 'var(--text-secondary)',
                         cursor: 'pointer',
                         textAlign: 'left',
-                        fontWeight: isActive ? '600' : '400',
-                        fontSize: '13px',
-                        transition: 'all 0.2s ease',
+                        boxShadow: isActive ? '0 4px 16px rgba(0, 229, 160, 0.15), inset 0 0 12px rgba(0, 229, 160, 0.05)' : 'none',
+                        transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
                         width: '100%'
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <NavIcon size={16} color={isActive ? 'var(--aura-safe)' : 'var(--text-secondary)'} />
-                        <span style={{ letterSpacing: '0.02em' }}>{item.label}</span>
+                        <div style={{
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '8px',
+                          background: isActive ? 'rgba(0, 229, 160, 0.2)' : 'rgba(255, 255, 255, 0.04)',
+                          border: isActive ? '1px solid rgba(0, 229, 160, 0.5)' : '1px solid rgba(255, 255, 255, 0.06)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0
+                        }}>
+                          <NavIcon size={16} color={isActive ? '#00e5a0' : 'var(--text-secondary)'} />
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '13px', fontWeight: isActive ? '700' : '500', color: isActive ? '#fff' : 'var(--text-primary)', letterSpacing: '0.02em', lineHeight: 1.2 }}>
+                            {item.label}
+                          </div>
+                          <div className="font-dm-mono" style={{ fontSize: '9px', color: isActive ? 'rgba(0, 229, 160, 0.85)' : 'var(--text-muted)', marginTop: '2px' }}>
+                            {item.sub}
+                          </div>
+                        </div>
                       </div>
+
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <span className="font-dm-mono" style={{
                           fontSize: '8px',
-                          padding: '2px 6px',
+                          padding: '2px 5px',
                           borderRadius: '4px',
-                          background: isActive ? 'rgba(0, 229, 160, 0.18)' : 'rgba(255, 255, 255, 0.04)',
-                          color: isActive ? 'var(--aura-safe)' : 'var(--text-muted)',
+                          background: isActive ? 'rgba(0, 229, 160, 0.2)' : 'rgba(255, 255, 255, 0.04)',
+                          color: isActive ? '#00e5a0' : 'var(--text-muted)',
                           fontWeight: '600'
                         }}>
                           {item.tag}
                         </span>
-                        {isActive && <ChevronRight size={13} color="var(--aura-safe)" />}
+                        {isActive && <ChevronRight size={14} color="#00e5a0" />}
                       </div>
                     </button>
                   );
@@ -958,31 +1083,52 @@ export default function App() {
             </div>
           </div>
 
-          {/* Bottom Console Diagnostics Widget */}
+          {/* Bottom Console: Executive SOC Telemetry Card */}
           <div style={{
-            padding: '16px 20px',
-            background: 'rgba(5, 7, 14, 0.85)',
-            borderTop: '1px solid rgba(255, 255, 255, 0.06)',
+            padding: '16px 18px',
+            background: 'rgba(5, 7, 14, 0.92)',
+            borderTop: '1px solid rgba(255, 255, 255, 0.07)',
             display: 'flex',
             flexDirection: 'column',
-            gap: '10px'
+            gap: '10px',
+            position: 'relative',
+            zIndex: 2
           }}>
+            {/* Live Clock with IST indicator */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div className="font-dm-mono" style={{ fontSize: '9px', color: 'var(--text-muted)', letterSpacing: '0.12em' }}>
-                SYS CLOCK (IST)
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Terminal size={12} color="var(--aura-safe)" />
+                <span className="font-dm-mono" style={{ fontSize: '10px', color: 'var(--text-muted)', letterSpacing: '0.1em' }}>
+                  SYS TIME
+                </span>
               </div>
-              <div className="font-dm-mono" style={{ fontSize: '9px', color: 'var(--aura-safe)', background: 'rgba(0, 229, 160, 0.08)', padding: '2px 6px', borderRadius: '4px', fontWeight: '600' }}>
-                v4.8 ACTIVE
-              </div>
+              <span className="font-dm-mono" style={{ fontSize: '9px', color: 'var(--aura-safe)', background: 'rgba(0, 229, 160, 0.1)', padding: '2px 6px', borderRadius: '4px', fontWeight: '700' }}>
+                ONLINE
+              </span>
             </div>
-            
-            <div className="font-dm-mono" style={{ fontSize: '18px', fontWeight: '600', color: '#ffffff', letterSpacing: '0.05em' }}>
+
+            <div className="font-dm-mono" style={{ fontSize: '20px', fontWeight: '700', color: '#ffffff', letterSpacing: '0.06em', textShadow: '0 0 12px rgba(0, 229, 160, 0.25)' }}>
               {currentTime || '00:00:00'}
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '4px', borderTop: '1px solid rgba(255, 255, 255, 0.04)' }}>
-              <span className="font-dm-mono" style={{ fontSize: '9px', color: 'var(--text-muted)' }}>ENCRYPTION</span>
-              <span className="font-dm-mono" style={{ fontSize: '9px', color: 'var(--text-secondary)' }}>4096-BIT RSA</span>
+            {/* Hardware & Cryptographic Diagnostics */}
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.02)',
+              border: '1px solid rgba(255, 255, 255, 0.05)',
+              borderRadius: '6px',
+              padding: '8px 10px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span className="font-dm-mono" style={{ fontSize: '9px', color: 'var(--text-muted)' }}>ENCRYPTION</span>
+                <span className="font-dm-mono" style={{ fontSize: '9px', color: '#4da6ff', fontWeight: '600' }}>4096-BIT RSA</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span className="font-dm-mono" style={{ fontSize: '9px', color: 'var(--text-muted)' }}>OPERATOR</span>
+                <span className="font-dm-mono" style={{ fontSize: '9px', color: 'var(--aura-safe)', fontWeight: '700' }}>Codewithjainam7</span>
+              </div>
             </div>
           </div>
         </aside>

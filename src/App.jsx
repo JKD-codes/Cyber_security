@@ -1285,33 +1285,30 @@ export default function App() {
    ========================================================================= */
 
 function MatrixLoader({ message }) {
-  const [currentText, setCurrentText] = useState(message || "Analyzing system telemetry...");
-  const [progress, setProgress] = useState(14);
-  const [telemetryAddress, setTelemetryAddress] = useState('0x7FFE_4A90');
+  const [currentText, setCurrentText] = useState(message || "Analyzing target security vectors...");
+  const [progress, setProgress] = useState(18);
 
   useEffect(() => {
     const diagnosticPhases = [
-      message || "Hashing payload signatures and evaluating byte entropy...",
-      "Executing deep heuristic homoglyph matrix audit...",
-      "Querying global zero-day CVE & threat repository...",
-      "Analyzing TLS cipher suite and perimeter protocol handshake...",
-      "Compiling cryptographic defense telemetry & executive dossier..."
+      message || "Auditing payload signatures & byte entropy...",
+      "Executing deep heuristic homoglyph inspection...",
+      "Querying global threat intelligence database...",
+      "Verifying TLS certificate chain & protocol handshake...",
+      "Compiling cryptographic defense telemetry..."
     ];
     let msgIndex = 0;
     const interval = setInterval(() => {
       msgIndex = (msgIndex + 1) % diagnosticPhases.length;
       setCurrentText(diagnosticPhases[msgIndex]);
-    }, 1300);
+    }, 1100);
 
     const progressInterval = setInterval(() => {
       setProgress(prev => {
-        if (prev >= 95) return 95;
-        const jump = Math.floor(Math.random() * 9) + 4;
-        return Math.min(prev + jump, 95);
+        if (prev >= 94) return 94;
+        const jump = Math.floor(Math.random() * 8) + 5;
+        return Math.min(prev + jump, 94);
       });
-      const hex = '0x' + Math.floor(Math.random() * 0xFFFFFF).toString(16).toUpperCase().padStart(6, '0');
-      setTelemetryAddress(hex);
-    }, 250);
+    }, 220);
 
     return () => {
       clearInterval(interval);
@@ -1326,9 +1323,9 @@ function MatrixLoader({ message }) {
       left: 0,
       right: 0,
       bottom: 0,
-      background: 'radial-gradient(ellipse at center, rgba(10, 16, 28, 0.94) 0%, rgba(4, 6, 12, 0.98) 100%)',
-      backdropFilter: 'blur(14px)',
-      WebkitBackdropFilter: 'blur(14px)',
+      background: 'rgba(7, 10, 18, 0.94)',
+      backdropFilter: 'blur(16px)',
+      WebkitBackdropFilter: 'blur(16px)',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
@@ -1336,165 +1333,63 @@ function MatrixLoader({ message }) {
       borderRadius: 'inherit',
       zIndex: 100,
       overflow: 'hidden',
-      padding: '28px'
+      padding: '18px 24px',
+      border: '1px solid rgba(0, 229, 160, 0.25)',
+      boxShadow: 'inset 0 0 30px rgba(0, 229, 160, 0.04)'
     }}>
-      {/* Background Matrix Grid Overlay */}
+      {/* Top Live Scanning Pill */}
       <div style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundImage: 'linear-gradient(rgba(0, 242, 254, 0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 242, 254, 0.04) 1px, transparent 1px)',
-        backgroundSize: '28px 28px',
-        pointerEvents: 'none',
-        opacity: 0.65
-      }} />
-
-      {/* Top Status Pill */}
-      <div 
-        className="font-dm-mono"
-        style={{
-          background: 'rgba(0, 242, 254, 0.08)',
-          border: '1px solid rgba(0, 242, 254, 0.35)',
-          color: '#00f2fe',
-          padding: '6px 14px',
-          borderRadius: '24px',
-          fontSize: '11px',
-          letterSpacing: '0.14em',
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '8px',
-          marginBottom: '26px',
-          boxShadow: '0 0 20px rgba(0, 242, 254, 0.2)',
-          zIndex: 10
-        }}
-      >
-        <span style={{
-          width: '7px',
-          height: '7px',
-          borderRadius: '50%',
-          background: '#00e5a0',
-          boxShadow: '0 0 10px #00e5a0',
-          animation: 'telemetry-blink 1.2s infinite'
-        }} />
-        <span>CYBER RECONNAISSANCE SCANNER ACTIVE</span>
-      </div>
-
-      {/* Holographic Radar Scanner Rig */}
-      <div style={{
-        position: 'relative',
-        width: '140px',
-        height: '140px',
-        marginBottom: '24px',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 10
+        gap: '8px',
+        background: 'rgba(0, 229, 160, 0.08)',
+        border: '1px solid rgba(0, 229, 160, 0.3)',
+        borderRadius: '20px',
+        padding: '4px 12px',
+        marginBottom: '14px'
       }}>
-        {/* Outer segmented radar ring */}
-        <div style={{
-          position: 'absolute',
-          width: '100%',
-          height: '100%',
-          border: '1px dashed rgba(0, 242, 254, 0.35)',
+        <span style={{
+          width: '6px',
+          height: '6px',
           borderRadius: '50%',
-          animation: 'radar-sweep 8s linear infinite'
+          background: '#00e5a0',
+          boxShadow: '0 0 8px #00e5a0',
+          animation: 'telemetry-blink 1.2s infinite'
         }} />
-
-        {/* Counter-rotating dashed track */}
-        <div style={{
-          position: 'absolute',
-          width: '82%',
-          height: '82%',
-          border: '2px solid transparent',
-          borderTopColor: 'var(--aura-safe)',
-          borderBottomColor: '#00f2fe',
-          borderRadius: '50%',
-          animation: 'radar-counter-sweep 4s linear infinite',
-          filter: 'drop-shadow(0 0 8px rgba(0, 229, 160, 0.5))'
-        }} />
-
-        {/* Radar Sweeping Gradient Cone */}
-        <div style={{
-          position: 'absolute',
-          width: '80%',
-          height: '80%',
-          borderRadius: '50%',
-          background: 'conic-gradient(from 0deg, rgba(0, 242, 254, 0.35) 0deg, rgba(0, 229, 160, 0.15) 60deg, transparent 90deg, transparent 360deg)',
-          animation: 'radar-sweep 2.2s linear infinite'
-        }} />
-
-        {/* Crosshair Brackets */}
-        <div style={{
-          position: 'absolute',
-          width: '54%',
-          height: '54%',
-          border: '1px solid rgba(255, 255, 255, 0.15)',
-          borderRadius: '6px',
-          animation: 'reticle-pulse 2s ease-in-out infinite'
-        }} />
-
-        {/* Vertical Sweeping Laser Beam */}
-        <div style={{
-          position: 'absolute',
-          width: '100%',
-          height: '2px',
-          background: 'linear-gradient(90deg, transparent 0%, #00f2fe 50%, transparent 100%)',
-          boxShadow: '0 0 12px #00f2fe',
-          animation: 'laser-sweep-vertical 2s ease-in-out infinite'
-        }} />
-
-        {/* Core Quantum Target Reticle */}
-        <div style={{
-          position: 'relative',
-          width: '42px',
-          height: '42px',
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(0, 229, 160, 0.3) 0%, rgba(0, 0, 0, 0.8) 100%)',
-          border: '1px solid var(--aura-safe)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          boxShadow: '0 0 20px rgba(0, 229, 160, 0.5)'
-        }}>
-          <Shield size={20} color="var(--aura-safe)" />
-        </div>
-
-        {/* 4 Cardinal Reticle Ticks */}
-        <div style={{ position: 'absolute', top: '-6px', width: '2px', height: '8px', background: '#00f2fe' }} />
-        <div style={{ position: 'absolute', bottom: '-6px', width: '2px', height: '8px', background: '#00f2fe' }} />
-        <div style={{ position: 'absolute', left: '-6px', width: '8px', height: '2px', background: '#00f2fe' }} />
-        <div style={{ position: 'absolute', right: '-6px', width: '8px', height: '2px', background: '#00f2fe' }} />
+        <span className="font-dm-mono" style={{ fontSize: '10.5px', color: '#00e5a0', letterSpacing: '0.12em', fontWeight: '600' }}>
+          SECURITY SCANNER ACTIVE
+        </span>
       </div>
 
-      {/* Dynamic Status Text */}
+      {/* Real-time Dynamic Diagnostic Stream */}
       <div 
         className="font-dm-mono" 
         style={{ 
-          fontSize: '13px', 
-          fontWeight: '600',
+          fontSize: '12px', 
           color: '#ffffff', 
-          letterSpacing: '0.12em', 
+          letterSpacing: '0.06em', 
           textAlign: 'center', 
           zIndex: 10,
-          maxWidth: '520px',
-          lineHeight: '1.5',
-          textShadow: '0 0 12px rgba(0, 242, 254, 0.4)',
-          marginBottom: '16px',
-          padding: '0 16px'
+          maxWidth: '560px',
+          lineHeight: '1.4',
+          marginBottom: '14px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '8px'
         }}
       >
-        {currentText.toUpperCase()}
+        <span style={{ color: '#00f2fe' }}>&gt;</span>
+        <span>{currentText}</span>
       </div>
 
-      {/* High-Tech Segmented Progress Bar */}
+      {/* Slim Modern Progress Track */}
       <div style={{
         width: '100%',
-        maxWidth: '380px',
+        maxWidth: '360px',
         display: 'flex',
         flexDirection: 'column',
-        gap: '8px',
+        gap: '6px',
         zIndex: 10,
         marginBottom: '12px'
       }}>
@@ -1503,38 +1398,37 @@ function MatrixLoader({ message }) {
           justifyContent: 'space-between',
           alignItems: 'center',
           fontFamily: "'DM Mono', monospace",
-          fontSize: '11px',
+          fontSize: '10.5px',
           color: 'var(--text-secondary)'
         }}>
-          <span>SCAN COMPLETION</span>
+          <span>DIAGNOSTIC PIPELINE</span>
           <span style={{ color: '#00f2fe', fontWeight: '700' }}>{progress}%</span>
         </div>
 
         <div style={{
           width: '100%',
-          height: '6px',
-          background: 'rgba(255, 255, 255, 0.06)',
-          borderRadius: '4px',
+          height: '4px',
+          background: 'rgba(255, 255, 255, 0.08)',
+          borderRadius: '2px',
           overflow: 'hidden',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
           position: 'relative'
         }}>
           <div style={{
             width: `${progress}%`,
             height: '100%',
-            background: 'linear-gradient(90deg, #00e5a0 0%, #00f2fe 50%, #7d44ff 100%)',
-            boxShadow: '0 0 14px rgba(0, 242, 254, 0.6)',
-            borderRadius: '4px',
-            transition: 'width 0.25s ease-out'
+            background: 'linear-gradient(90deg, #00e5a0 0%, #00f2fe 100%)',
+            boxShadow: '0 0 10px rgba(0, 242, 254, 0.5)',
+            borderRadius: '2px',
+            transition: 'width 0.22s ease-out'
           }} />
         </div>
       </div>
 
-      {/* Telemetry Micro-Data Strip */}
+      {/* Telemetry Micro-Badges */}
       <div 
         className="font-dm-mono"
         style={{
-          fontSize: '10px',
+          fontSize: '9.5px',
           color: 'var(--text-muted)',
           letterSpacing: '0.08em',
           textAlign: 'center',
@@ -1545,11 +1439,11 @@ function MatrixLoader({ message }) {
           justifyContent: 'center'
         }}
       >
-        <span>PTR: <span style={{ color: 'var(--aura-safe)' }}>{telemetryAddress}</span></span>
+        <span>LATENCY: <strong style={{ color: '#00f2fe' }}>14ms</strong></span>
         <span>•</span>
-        <span>LATENCY: <span style={{ color: '#00f2fe' }}>12ms</span></span>
+        <span>CIPHER: <strong style={{ color: 'var(--aura-safe)' }}>TLS 1.3 / AES-GCM</strong></span>
         <span>•</span>
-        <span>ENGINE: <span style={{ color: '#fff' }}>V9-NEURAL</span></span>
+        <span>CORE: <strong style={{ color: '#ffffff' }}>ZERO-DAY HEURISTICS</strong></span>
       </div>
     </div>
   );
@@ -2578,15 +2472,13 @@ function DashboardModule({ windowWidth, auraColor, riskScore, setRiskScore }) {
 
 
   const handleBreachSearch = async (e, overrideTarget, overrideMode) => {
-
-    e.preventDefault();
-
-    const cleanTarget = (overrideTarget !== undefined ? overrideTarget : searchTarget).trim();
-    const effectiveMode = overrideMode || auditMode;
-    if (overrideTarget !== undefined) setSearchTarget(overrideTarget);
-    if (overrideMode) setAuditMode(overrideMode);
-
+    if (e && e.preventDefault) e.preventDefault();
+    const targetToSearch = typeof overrideTarget === 'string' ? overrideTarget : searchTarget;
+    const cleanTarget = (targetToSearch || '').trim();
+    const effectiveMode = typeof overrideMode === 'string' ? overrideMode : auditMode;
     if (!cleanTarget) return;
+    if (typeof overrideTarget === 'string') setSearchTarget(overrideTarget);
+    if (typeof overrideMode === 'string') setAuditMode(overrideMode);
 
 
 
@@ -3574,11 +3466,10 @@ function ScamDetectorModule({ windowWidth, setRiskScore }) {
 
 
   const executeHeuristicAnalysis = async (overrideText) => {
-
-    const input = (overrideText !== undefined ? overrideText : inputText).trim();
-    if (overrideText !== undefined) setInputText(overrideText);
-
+    const textToAnalyze = typeof overrideText === 'string' ? overrideText : inputText;
+    const input = (textToAnalyze || '').trim();
     if (!input) return;
+    if (typeof overrideText === 'string') setInputText(overrideText);
 
 
 
@@ -3726,7 +3617,7 @@ function ScamDetectorModule({ windowWidth, setRiskScore }) {
 
       {/* Input panel card */}
 
-      <div className="glass-card" style={{ padding: '28px', position: 'relative' }}>
+      <div className="glass-card" style={{ padding: '28px', position: 'relative', minHeight: '200px' }}>
 
         
 
@@ -4682,7 +4573,7 @@ function FootprintModule({ windowWidth, setRiskScore, setTriggerLaser }) {
 
       {/* Main Checklist Card */}
 
-      <div className="glass-card" style={{ padding: '28px', position: 'relative' }}>
+      <div className="glass-card" style={{ padding: '28px', position: 'relative', minHeight: '200px' }}>
 
         {loading && <MatrixLoader message="Executing full static configuration compile scans..." />}
 
@@ -6024,10 +5915,12 @@ function FamilySafetyModule({ windowWidth }) {
 
 
   const handleAuditRequest = (overrideDesc, overridePersona) => {
-
-    const desc = (overrideDesc !== undefined ? overrideDesc : description).trim();
-    const persona = overridePersona || selectedPersona;
+    const descVal = typeof overrideDesc === 'string' ? overrideDesc : description;
+    const desc = (descVal || '').trim();
+    const persona = typeof overridePersona === 'string' ? overridePersona : selectedPersona;
     if (!desc) return;
+    if (typeof overrideDesc === 'string') setDescription(overrideDesc);
+    if (typeof overridePersona === 'string') setSelectedPersona(overridePersona);
     if (overrideDesc !== undefined) setDescription(overrideDesc);
     if (overridePersona) setSelectedPersona(overridePersona);
 
@@ -6657,26 +6550,15 @@ function SiteScannerModule({ windowWidth, setRiskScore, setTriggerLaser }) {
 
   // API Key removed for security
 
-  const performScan = async () => {
-
-    if (!inputUrl.trim()) return;
-
-    
-
-    let target = inputUrl.trim();
-
+  const performScan = async (overrideUrl) => {
+    const urlToScan = typeof overrideUrl === 'string' ? overrideUrl : inputUrl;
+    let target = (urlToScan || '').trim();
+    if (!target) return;
     if (!target.startsWith('http')) {
-
       target = 'https://' + target;
-
-      setInputUrl(target);
-
     }
-
-
-
+    setInputUrl(target);
     setLoading(true);
-
     setScanResult(null);
 
     if(setTriggerLaser) setTriggerLaser(true);
@@ -6813,7 +6695,7 @@ function SiteScannerModule({ windowWidth, setRiskScore, setTriggerLaser }) {
 
       {/* Input Form */}
 
-      <div className="glass-card" style={{ padding: '28px', position: 'relative' }}>
+      <div className="glass-card" style={{ padding: '28px', position: 'relative', minHeight: '200px' }}>
 
         {loading && <MatrixLoader message={loadingMessage} />}
 

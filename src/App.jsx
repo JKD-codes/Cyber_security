@@ -6705,7 +6705,28 @@ function SiteScannerModule({ windowWidth, setRiskScore, setTriggerLaser }) {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
 
-
+            {/* Target Presets for Viva Demonstration */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '8px' }}>
+              <div className="font-dm-mono" style={{ fontSize: '11px', color: 'var(--text-muted)', letterSpacing: '0.08em' }}>SAMPLE TARGET PRESETS:</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                {[
+                  { label: 'google.com (Hardened)', url: 'google.com' },
+                  { label: 'github.com (Strict HSTS)', url: 'github.com' },
+                  { label: 'testphp.vulnweb.com (Vulnerable Web Lab)', url: 'testphp.vulnweb.com' },
+                  { label: 'paypal-security.fake-domain.xyz', url: 'paypal-security.fake-domain.xyz' }
+                ].map((preset, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    className="quick-test-pill"
+                    onClick={() => performScan(preset.url)}
+                  >
+                    <Globe size={11} color="#00f2fe" />
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             <label className="font-dm-mono" style={{ fontSize: '11px', color: 'var(--text-secondary)', letterSpacing: '0.12em' }}>TARGET URL TO SCAN</label>
 

@@ -2703,7 +2703,7 @@ function DashboardModule({ windowWidth, auraColor, riskScore, setRiskScore }) {
 
                       <span className="font-dm-mono" style={{ fontSize: '12px', fontWeight: '600', color: 'var(--aura-danger)' }}>
 
-                        EXPOSURE DETECTED: {breachResult.length} MATCHES EXPOSED
+                        EXPOSURE DETECTED: {breachResult.filter(m => !m.possibleMatch).length} CONFIRMED{breachResult.some(m => m.possibleMatch) ? ` + ${breachResult.filter(m => m.possibleMatch).length} POSSIBLE` : ''}
 
                       </span>
 
@@ -2741,7 +2741,7 @@ function DashboardModule({ windowWidth, auraColor, riskScore, setRiskScore }) {
 
                           <span className="font-dm-mono" style={{ fontSize: '9px', background: leak.riskRating === 'CRITICAL' ? 'rgba(255,61,90,0.15)' : 'rgba(255,183,77,0.15)', color: leak.riskRating === 'CRITICAL' ? 'var(--aura-danger)' : 'var(--aura-watch)', padding: '2px 6px', borderRadius: '4px', fontWeight: '600' }}>
 
-                            {leak.riskRating}
+                            {leak.possibleMatch ? 'POSSIBLE · ' : ''}{leak.riskRating}
 
                           </span>
 
@@ -2781,7 +2781,7 @@ function DashboardModule({ windowWidth, auraColor, riskScore, setRiskScore }) {
 
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
 
-                    <span className="font-dm-mono" style={{ fontSize: '12px', fontWeight: '600', color: 'var(--aura-safe)' }}>NO KNOWN BREACHES FOUND</span>
+                    <span className="font-dm-mono" style={{ fontSize: '12px', fontWeight: '600', color: 'var(--aura-safe)' }}>NOT FOUND IN CHECKED DATABASES</span>
 
                     <span style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
 

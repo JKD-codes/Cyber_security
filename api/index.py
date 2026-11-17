@@ -1207,6 +1207,68 @@ async def _query_leakcheck(client, query):
         return {"ok": False, "error": str(e) or type(e).__name__}
 
 
+async def _query_hudsonrock(client, email):
+    """Hudson Rock Cavalier (free): is this email in info-stealer malware logs?"""
+    try:
+        r = await client.get("https://cavalier.hudsonrock.com/api/json/v2/osint-tools/search-by-email",
+                             params={"email": email}, timeout=8.0)
+        if r.status_code != 200:
+            return {"ok": False, "error": f"HTTP {r.status_code}"}
+        return {"ok": True, "stealers": r.json().get("stealers") or []}
+    except Exception as e:
+        return {"ok": False, "error": str(e) or type(e).__name__}
+
+
+async def _query_comb(client, email):
+    """ProxyNova COMB search (free). Its search is fuzzy, so only EXACT login matches are counted.
+    The returned lines contain plaintext passwords: they are counted and immediately discarded, never returned or logged."""
+    try:
+        r = await client.get("https://api.proxynova.com/comb", params={"query": email, "start": 0, "limit": 100}, timeout=10.0)
+        if r.status_code != 200:
+            return {"ok": False, "error": f"HTTP {r.status_code}"}
+        lines = r.json().get("lines") or []
+        exact = sum(1 for ln in lines if ln.split(":", 1)[0].strip().lower() == email)
+        del lines
+        return {"ok": True, "exact": exact}
+    except Exception as e:
+        return {"ok": False, "error": str(e) or type(e).__name__}
+
+
+def _stealer_matches(stealers):
+    """One combined card for all infections (computer names / IPs are deliberately not exposed)."""
+    if not stealers:
+        return []
+    dates = sorted(d for d in ((s.get("date_compromised") or "")[:10] for s in stealers) if d)
+    latest = dates[-1] if dates else None
+    services = sum((s.get("total_user_services") or 0) + (s.get("total_corporate_services") or 0) for s in stealers)
+    n = len(stealers)
+    return [{
+        "source": f"Info-stealer malware: {n} infected computer{'s' if n != 1 else ''}" + (f" (latest {latest})" if latest else ""),
+        "breachName": "Hudson Rock info-stealer logs",
+        "date": latest[:7] if latest else None,
+        "domain": None, "records": None, "description": None,
+        "leakType": f"Saved browser passwords, cookies & autofill stolen from infected device(s) ({services} logins captured)",
+        "exposedData": ["Passwords", "Browser cookies", "Autofill data", "Device information"],
+        "riskRating": "CRITICAL",
+        "recommendations": "A computer where you logged in with this email was infected by password-stealing malware. Run a full antivirus scan "
+                           "(or reinstall Windows), then change ALL saved passwords from a clean device, log out of all sessions, and enable 2FA everywhere.",
+        "foundIn": ["Hudson Rock"],
+    }]
+
+
+def _comb_match(exact):
+    return {
+        "source": "COMB (Compilation of Many Breaches) credential list",
+        "breachName": "COMB", "date": "2021-02", "domain": None, "records": 3_200_000_000, "description": None,
+        "leakType": f"Email + plaintext password pairs ({exact}{'+' if exact >= 100 else ''} entries)",
+        "exposedData": ["Email addresses", "Passwords"],
+        "riskRating": "CRITICAL",
+        "recommendations": "Your email appears with plaintext passwords in a public combo list used for credential-stuffing. "
+                           "Change any password you have used with this email (especially old ones), and never reuse passwords.",
+        "foundIn": ["ProxyNova COMB"],
+    }
+
+
 def _build_matches(xon_names, lc_sources, details):
     catalog = _breach_catalog()
     merged = {}
@@ -1259,14 +1321,22 @@ def _result(target, typ, matches, sources_checked, extra_fields=None, extra=None
     failed = [s["name"] for s in sources_checked if not s["ok"]]
     note = f" (Note: {', '.join(failed)} unavailable — results may be incomplete.)" if failed else ""
     checked = ", ".join(s["name"] for s in sources_checked if s["ok"])
+    confirmed = [m for m in matches if not m.get("possibleMatch")]
+    possible = [m for m in matches if m.get("possibleMatch")]
     if matches:
-        crit = sum(m["riskRating"] == "CRITICAL" for m in matches)
-        pw = any("password" in c.lower() for c in exposed)
-        score = min(98, 45 + 4 * len(matches) + 3 * crit + (15 if pw else 0))
-        summary = f"Found in {len(matches)} data breach{'es' if len(matches) != 1 else ''} ({crit} critical) across {checked}." + note
+        crit = sum(m["riskRating"] == "CRITICAL" for m in confirmed)
+        pw = any("password" in c.lower() for m in confirmed for c in m["exposedData"])
+        score = min(98, 45 + 4 * len(confirmed) + 2 * len(possible) + 3 * crit + (15 if pw else 0)) if confirmed else min(70, 35 + 2 * len(possible))
+        parts = []
+        if confirmed:
+            parts.append(f"Found in {len(confirmed)} data breach{'es' if len(confirmed) != 1 else ''} ({crit} critical)")
+        if possible:
+            parts.append(f"{len(possible)} possible match{'es' if len(possible) != 1 else ''} where the number was stored without a country code (could belong to a same-digit number in another country)")
+        summary = " + ".join(parts) + f". Checked: {checked}." + note
     else:
         score = 8
-        summary = f"No breaches found in {checked}." + note
+        summary = (f"Not found in the databases we checked ({checked}). This does NOT guarantee your data was never leaked: "
+                   "many leaks are never made public or indexed." + note)
     res = {
         "status": "success", "target": target, "type": typ, "breached": bool(matches), "verified": True,
         "count": len(matches), "riskScore": score, "matches": matches, "exposedDataTypes": exposed,
@@ -1307,16 +1377,21 @@ async def check_credential(req: Optional[CredentialCheckRequest] = None, target:
             email = clean.lower()
             if not EMAIL_RE.match(email):
                 return {"status": "error", "type": "email", "target": clean, "breached": None, "matches": [], "summary": "That does not look like a valid email address."}
-            xon, lc = await asyncio.gather(_query_xon(client, email), _query_leakcheck(client, email))
+            xon, lc, hr, comb = await asyncio.gather(_query_xon(client, email), _query_leakcheck(client, email),
+                                                     _query_hudsonrock(client, email), _query_comb(client, email))
             xon_names = xon.get("names", []) if xon["ok"] else []
             lc_sources = lc.get("sources", []) if lc["ok"] else []
             catalog = _breach_catalog()
             missing = [n for n in xon_names if _norm_breach_name(n) not in catalog]
             details = await _xon_details(client, missing) if missing else {}
-            matches = _build_matches(xon_names, lc_sources, details)
+            stealer = _stealer_matches(hr.get("stealers", [])) if hr["ok"] else []
+            comb_hit = [_comb_match(comb["exact"])] if comb["ok"] and comb["exact"] else []
+            matches = stealer + comb_hit + _build_matches(xon_names, lc_sources, details)
             sources = [
                 {"name": "XposedOrNot", "ok": xon["ok"], "found": len(xon_names), **({"error": xon["error"]} if not xon["ok"] else {})},
                 {"name": "LeakCheck", "ok": lc["ok"], "found": lc.get("found", 0), **({"error": lc["error"]} if not lc["ok"] else {})},
+                {"name": "Hudson Rock (info-stealers)", "ok": hr["ok"], "found": len(hr.get("stealers", [])), **({"error": hr["error"]} if not hr["ok"] else {})},
+                {"name": "COMB combo list", "ok": comb["ok"], "found": comb.get("exact", 0), **({"error": comb["error"]} if not comb["ok"] else {})},
             ]
             extra_fields = [f.replace("_", " ").title() for f in lc.get("fields", [])] if lc["ok"] else []
             return _result(clean, "email", matches, sources, extra_fields,
@@ -1343,19 +1418,42 @@ async def check_credential(req: Optional[CredentialCheckRequest] = None, target:
             else:
                 digits = re.sub(r"\D", "", clean)
                 e164 = "+" + (digits if clean.startswith("+") or len(digits) > 10 else "91" + digits)
-            lc = await _query_leakcheck(client, e164.lstrip("+"))
-            lc_sources = lc.get("sources", []) if lc["ok"] else []
-            matches = _build_matches([], lc_sources, {})
-            # For phone lookups the public index reports the combined data fields exposed alongside the number
-            fields = [f.replace("_", " ").title() for f in lc.get("fields", [])] if lc["ok"] else []
-            for m in matches:
-                if not m["exposedData"] and fields:
-                    m["exposedData"] = fields
-                    m["leakType"] = ", ".join(fields) + " (combined fields across leaks)"
-                    m["riskRating"] = _rate(fields)
-                    m["recommendations"] = _recommend(fields, m["breachName"])
-            sources = [{"name": "LeakCheck", "ok": lc["ok"], "found": lc.get("found", 0), **({"error": lc["error"]} if not lc["ok"] else {})}]
-            return _result(e164, "phone", matches, sources, fields, {"normalized": e164, **region_info,
+            full_digits = e164.lstrip("+")
+            national = str(num.national_number) if phonenumbers else full_digits[-10:]
+            # Many leaks (especially Indian ones) store numbers without the country code, so search both forms.
+            search_national = national != full_digits and len(national) >= 8
+            lc, lc_nat = await asyncio.gather(
+                _query_leakcheck(client, full_digits),
+                _query_leakcheck(client, national) if search_national else asyncio.sleep(0, result=None),
+            )
+
+            def fields_of(res):
+                return [f.replace("_", " ").title() for f in res.get("fields", [])] if res and res["ok"] else []
+
+            def fill(ms, fields, note=""):
+                for m in ms:
+                    if not m["exposedData"] and fields:
+                        m["exposedData"] = fields
+                        m["leakType"] = ", ".join(fields) + f" (combined fields across leaks{note})"
+                        m["riskRating"] = _rate(fields)
+                        m["recommendations"] = _recommend(fields, m["breachName"])
+                return ms
+
+            matches = fill(_build_matches([], lc.get("sources", []) if lc["ok"] else [], {}), fields_of(lc))
+            seen = {_norm_breach_name(m["breachName"]) for m in matches}
+            sources = [{"name": f"LeakCheck (+{full_digits})", "ok": lc["ok"], "found": lc.get("found", 0), **({"error": lc["error"]} if not lc["ok"] else {})}]
+            if lc_nat is not None:
+                nat_sources = [s for s in (lc_nat.get("sources", []) if lc_nat["ok"] else []) if _norm_breach_name(s.get("name", "")) not in seen]
+                possible = fill(_build_matches([], nat_sources, {}), fields_of(lc_nat), "; number stored without country code")
+                for m in possible:
+                    m["possibleMatch"] = True
+                    m["source"] += " (possible match)"
+                    m["foundIn"] = [f"LeakCheck ({national}, no country code)"]
+                    if m["riskRating"] == "CRITICAL":
+                        m["riskRating"] = "HIGH"  # not certain it's this person's number
+                matches += possible
+                sources.append({"name": f"LeakCheck ({national})", "ok": lc_nat["ok"], "found": lc_nat.get("found", 0), **({"error": lc_nat["error"]} if not lc_nat["ok"] else {})})
+            return _result(e164, "phone", matches, sources, fields_of(lc), {"normalized": e164, **region_info,
                            "totalRecordsIndexed": lc.get("found", 0) if lc["ok"] else None})
 
         # 3. PASSWORD (k-anonymity: only the first 5 SHA-1 chars leave the server)

@@ -141,36 +141,6 @@ const ACTIVE_INDIAN_THREATS = [
 
 
 
-// Simulated leak database index for HaveIBeenPwned-style Auditor
-
-const LOCAL_LEAK_DATABASE = {
-
-  'deepmind@google.com': [
-
-    { source: 'Android Dev Log Breach (2024)', leakType: 'Source Code, API Keys, Passwords', riskRating: 'CRITICAL', recommendations: 'Deauthorize active API keys immediately. Shift credential structures to secure environment variables.' },
-
-    { source: 'Global Vite CDN Exposure (2025)', leakType: 'Session Tokens, Email Address', riskRating: 'HIGH', recommendations: 'Clear current browser token caches and regenerate deployment credentials.' }
-
-  ],
-
-  'admin@domain.com': [
-
-    { source: 'Retailer Express Database Dump (2022)', leakType: 'Plaintext Passwords, Phone Number', riskRating: 'HIGH', recommendations: 'Migrate admin accounts to separate usernames and configure secure multi-factor authentication.' },
-
-    { source: 'Indian Telecom Leak (2024)', leakType: 'Aadhaar ID, Phone Number, Home Address', riskRating: 'CRITICAL', recommendations: 'Lock your biometric details via UIDAI portal immediately. Request secondary billing credentials.' }
-
-  ],
-
-  'user@example.com': [
-
-    { source: 'EduCenter Education Leak (2023)', leakType: 'Encrypted Password Hashes, Address', riskRating: 'MEDIUM', recommendations: 'Rotate lookalike passwords shared across personal learning accounts.' }
-
-  ]
-
-};
-
-
-
 // OWASP Top 10 Configurations & Auditing Framework
 
 const OWASP_AUDIT_SETUP = {
@@ -2255,221 +2225,77 @@ function DashboardModule({ windowWidth, auraColor, riskScore, setRiskScore }) {
 
   const [backendHealth, setBackendHealth] = useState(null);
 
+  const [breachMeta, setBreachMeta] = useState(null);
 
 
-  // Client-side fallback for credential breach checking
 
+  // Client-side fallback used ONLY when the backend is unreachable.
+  // Never fabricates results: anything that cannot be verified is reported as unverified.
   const runClientSideBreachAudit = async (target, mode) => {
-
     const clean = target.trim();
-
     let detMode = mode;
-
     if (detMode === 'auto') {
-
-      if (clean.includes('@') && !clean.includes(' ')) {
-
-        detMode = 'email';
-
-      } else if (/^(\+?\d[\d\s\-]{8,14}\d)$/.test(clean)) {
-
-        detMode = 'phone';
-
-      } else if (clean.length >= 4 && !clean.includes(' ')) {
-
-        detMode = 'password';
-
-      } else {
-
-        detMode = 'email';
-
-      }
-
+      const digits = clean.replace(/\D/g, '');
+      if (clean.includes('@') && !clean.includes(' ')) detMode = 'email';
+      else if (/^\+?[\d\s\-().]{7,22}$/.test(clean) && digits.length >= 7 && digits.length <= 15) detMode = 'phone';
+      else detMode = 'password';
     }
 
-
-
-    // Password check via Web Crypto SHA-1 & HIBP
-
+    // Password: HIBP Pwned Passwords k-anonymity (only 5 hash chars leave the browser)
     if (detMode === 'password') {
-
       try {
-
-        const msgBuffer = new TextEncoder().encode(clean);
-
-        const hashBuffer = await crypto.subtle.digest('SHA-1', msgBuffer);
-
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-
-        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
-
+        const hashBuffer = await crypto.subtle.digest('SHA-1', new TextEncoder().encode(clean));
+        const hashHex = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
         const prefix = hashHex.slice(0, 5);
-
         const suffix = hashHex.slice(5);
-
-
-
         const resp = await fetch(`https://api.pwnedpasswords.com/range/${prefix}`);
-
         if (resp.ok) {
-
-          const lines = (await resp.text()).split('\n');
-
-          for (const line of lines) {
-
-            if (line.trim().startsWith(suffix)) {
-
-              const count = parseInt(line.split(':')[1].trim(), 10);
-
+          for (const line of (await resp.text()).split('\n')) {
+            const [h, c] = line.trim().split(':');
+            if (h === suffix) {
+              const count = parseInt(c, 10);
               return {
-
-                breached: true,
-
-                matches: [{
-
-                  source: `Dark Web Credential Dumps (${count.toLocaleString()} exposures)`,
-
-                  leakType: 'Plaintext Password / Hash Dump',
-
-                  riskRating: 'CRITICAL',
-
-                  recommendations: 'Never reuse this password anywhere. Automated botnets continuously spray this exact string.'
-
-                }],
-
-                summary: `This password was exposed ${count.toLocaleString()} times in recorded breaches!`
-
+                status: 'success', breached: true, riskScore: 95,
+                matches: [{ source: `Pwned Passwords corpus (${count.toLocaleString()} sightings)`, leakType: 'Plaintext password seen in breach dumps', riskRating: 'CRITICAL', recommendations: 'Never use this password anywhere. Attackers use it in credential-stuffing attacks.' }],
+                summary: `This password has appeared ${count.toLocaleString()} times in public data breaches!`
               };
-
             }
-
           }
-
+          return { status: 'success', breached: false, matches: [], summary: 'This password does not appear in the HIBP Pwned Passwords corpus.' };
         }
-
-        return { breached: false, matches: [], summary: 'Password not found in any public breach databases (800M+ hashes checked).' };
-
       } catch (e) {
-
         console.warn('HIBP client-side error:', e);
-
       }
-
+      return { status: 'error', breached: null, matches: [], summary: 'Could not reach Pwned Passwords — result UNVERIFIED.' };
     }
 
-
-
-    // Local simulated catalog fallback
-
-    const emailClean = clean.toLowerCase();
-
-    const directMatch = LOCAL_LEAK_DATABASE[emailClean];
-
-    if (directMatch) {
-
-      return {
-
-        breached: true,
-
-        matches: directMatch,
-
-        summary: `Found ${directMatch.length} historical breach records for this identifier.`
-
-      };
-
+    // Email: XposedOrNot allows browser (CORS) requests
+    if (detMode === 'email') {
+      try {
+        const resp = await fetch(`https://api.xposedornot.com/v1/check-email/${encodeURIComponent(clean.toLowerCase())}`);
+        if (resp.status === 404) return { status: 'success', breached: false, matches: [], summary: 'No breaches found in XposedOrNot (backend offline: LeakCheck not checked).' };
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.Error === 'Not found') return { status: 'success', breached: false, matches: [], summary: 'No breaches found in XposedOrNot (backend offline: LeakCheck not checked).' };
+          const names = (data.breaches || []).flat().filter(n => typeof n === 'string');
+          const matches = names.map(n => ({
+            source: n, leakType: 'Details available when the backend is online', riskRating: 'HIGH',
+            recommendations: `Change your password on ${n} and anywhere you reused it; enable 2FA.`
+          }));
+          return { status: 'success', breached: matches.length > 0, riskScore: Math.min(98, 45 + 4 * matches.length), matches, summary: `Found in ${matches.length} data breaches (XposedOrNot; backend offline so LeakCheck was not checked).` };
+        }
+      } catch (e) {
+        console.warn('XposedOrNot client-side error:', e);
+      }
     }
-
-
-
-    if (['admin', 'test', 'demo', 'user', 'deepmind', 'hacked', 'leak'].some(k => emailClean.includes(k))) {
-
-      return {
-
-        breached: true,
-
-        matches: [
-
-          {
-
-            source: 'Cloud Infrastructure & Dev Exposure (2024)',
-
-            leakType: 'API Keys, Deployment Environment Variables, Session Tokens',
-
-            riskRating: 'CRITICAL',
-
-            recommendations: 'Rotate root API tokens and invalidate active web sessions immediately.'
-
-          },
-
-          {
-
-            source: 'Global CDN Incident (2025)',
-
-            leakType: 'Session Tokens, Request Headers',
-
-            riskRating: 'HIGH',
-
-            recommendations: 'Clear browser token caches and re-issue login tokens.'
-
-          }
-
-        ],
-
-        summary: 'Matches 2 security test exposure entries.'
-
-      };
-
-    }
-
-
-
-    if (detMode === 'phone') {
-
-      return {
-
-        breached: true,
-
-        matches: [
-
-          {
-
-            source: 'Indian Telecom 750M Scraped Registry (2024)',
-
-            leakType: 'Subscriber MSISDN, Primary Circle, Approximate Location',
-
-            riskRating: 'HIGH',
-
-            recommendations: 'Lock your biometrics via UIDAI mAadhaar app. Beware of WhatsApp OTP call-forwarding codes (*401*).'
-
-          }
-
-        ],
-
-        summary: 'Mobile number pattern matched entries in regional scraped directories.'
-
-      };
-
-    }
-
-
 
     return {
-
-      breached: false,
-
-      matches: [],
-
-      summary: 'Zero compromised entries found in global leak registries.'
-
+      status: 'error', breached: null, matches: [],
+      summary: detMode === 'phone'
+        ? 'Phone leak search needs the CyberShield backend (LeakCheck index), which is unreachable — result UNVERIFIED.'
+        : 'Could not reach the breach databases — result UNVERIFIED. Please retry.'
     };
-
   };
-
-
-
-
-
-
 
   const handleBreachSearch = async (e, overrideTarget, overrideMode) => {
     if (e && e.preventDefault) e.preventDefault();
@@ -2480,112 +2306,49 @@ function DashboardModule({ windowWidth, auraColor, riskScore, setRiskScore }) {
     if (typeof overrideTarget === 'string') setSearchTarget(overrideTarget);
     if (typeof overrideMode === 'string') setAuditMode(overrideMode);
 
-
-
     setLoading(true);
-
     setBreachResult(null);
-
     setBreachSummary('');
-
+    setBreachMeta(null);
     setHasSearched(false);
 
-
-
+    const body = JSON.stringify({ target: cleanTarget, mode: effectiveMode });
     try {
-
       let data = null;
-
-      // 1. Try relative /api/check/credential (Vite dev proxy / Vercel rewrite)
-
-      try {
-
-        const res = await fetch('/api/check/credential', {
-
-          method: 'POST',
-
-          headers: { 'Content-Type': 'application/json' },
-
-          body: JSON.stringify({ target: cleanTarget, mode: auditMode })
-
-        });
-
-        if (res.ok) data = await res.json();
-
-      } catch (err) {
-
-        // Fallback to direct localhost:8000
-
+      // 1. Relative /api (Vite dev proxy / Vercel rewrite), then direct localhost:8000
+      for (const url of ['/api/check/credential', 'http://localhost:8000/api/check/credential']) {
         try {
-
-          const res = await fetch('http://localhost:8000/api/check/credential', {
-
-            method: 'POST',
-
-            headers: { 'Content-Type': 'application/json' },
-
-            body: JSON.stringify({ target: cleanTarget, mode: auditMode })
-
-          });
-
-          if (res.ok) data = await res.json();
-
-        } catch (e2) {
-
-          console.warn('Backend unavailable, running client-side audit fallback', e2);
-
+          const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body });
+          const ct = res.headers.get('content-type') || '';
+          if (res.ok && ct.includes('application/json')) { data = await res.json(); break; }
+        } catch (err) {
+          console.warn(`Credential audit via ${url} failed`, err);
         }
-
       }
-
-
-
       // 2. Client-side fallback if backend not available
+      if (!data) data = await runClientSideBreachAudit(cleanTarget, effectiveMode);
 
-      if (!data) {
-
-        data = await runClientSideBreachAudit(cleanTarget, auditMode);
-
-      }
-
-
-
-      if (data && data.breached) {
-
+      setBreachMeta(data);
+      if (data.status === 'error' || data.breached === null || data.breached === undefined) {
+        setBreachResult('error');
+        setBreachSummary(data.summary || data.message || 'Audit could not be completed — result UNVERIFIED.');
+      } else if (data.breached) {
         setBreachResult(data.matches || []);
-
         setBreachSummary(data.summary || `${data.matches.length} breach matches detected.`);
-
         setRiskScore(data.riskScore || (data.matches.some(m => m.riskRating === 'CRITICAL') ? 85 : 58));
-
       } else {
-
         setBreachResult([]);
-
-        setBreachSummary(data?.summary || 'Zero compromised records found in live breach registries.');
-
-        setRiskScore(14); // Isolated / Safe
-
+        setBreachSummary(data.summary || 'No breaches found.');
+        setRiskScore(data.riskScore || 14);
       }
-
     } catch (err) {
-
       console.error('Breach search error:', err);
-
-      setBreachResult([]);
-
-      setBreachSummary('Zero compromised records found in live breach registries.');
-
-      setRiskScore(14);
-
+      setBreachResult('error');
+      setBreachSummary('Audit failed unexpectedly — result UNVERIFIED. Please retry.');
     } finally {
-
       setHasSearched(true);
-
       setLoading(false);
-
     }
-
   };
 
 
@@ -2917,7 +2680,17 @@ function DashboardModule({ windowWidth, auraColor, riskScore, setRiskScore }) {
 
             {hasSearched ? (
 
-              breachResult && breachResult.length > 0 ? (
+              breachResult === 'error' ? (
+
+                <div className="font-dm-sans" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255, 183, 77, 0.08)', padding: '12px 16px', borderRadius: '8px', border: '1px solid var(--aura-watch)', animation: 'float-in 0.3s ease' }}>
+                  <AlertOctagon size={18} color="var(--aura-watch)" />
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span className="font-dm-mono" style={{ fontSize: '12px', fontWeight: '600', color: 'var(--aura-watch)' }}>AUDIT UNVERIFIED</span>
+                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>{breachSummary}</span>
+                  </div>
+                </div>
+
+              ) : breachResult && breachResult.length > 0 ? (
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', animation: 'float-in 0.3s ease' }}>
 
@@ -2947,9 +2720,15 @@ function DashboardModule({ windowWidth, auraColor, riskScore, setRiskScore }) {
 
                   </div>
 
+                  {breachMeta && (breachMeta.normalized || breachMeta.sourcesChecked) && (
+                    <div className="font-dm-mono text-wrap-safe" style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                      {breachMeta.normalized && <span>NUMBER: {breachMeta.normalized}{breachMeta.region ? ` · ${breachMeta.region}` : ''}{breachMeta.carrier ? ` · ${breachMeta.carrier}` : ''}</span>}
+                      {breachMeta.sourcesChecked && <span>SOURCES: {breachMeta.sourcesChecked.map(s => `${s.name} ${s.ok ? '✓' : '✗'}`).join(' · ')}</span>}
+                      {breachMeta.exposedDataTypes && breachMeta.exposedDataTypes.length > 0 && <span>DATA EXPOSED: {breachMeta.exposedDataTypes.slice(0, 12).join(', ')}</span>}
+                    </div>
+                  )}
 
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '180px', overflowY: 'auto', paddingRight: '4px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '360px', overflowY: 'auto', paddingRight: '4px' }}>
 
                     {breachResult.map((leak, idx) => (
 
@@ -2973,6 +2752,12 @@ function DashboardModule({ windowWidth, auraColor, riskScore, setRiskScore }) {
 
                         </div>
 
+                        {(leak.records || leak.domain || leak.foundIn) && (
+                          <div className="font-dm-mono text-wrap-safe" style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                            {[leak.domain, leak.records ? `${Number(leak.records).toLocaleString()} records` : null, leak.foundIn ? `via ${leak.foundIn.join(' + ')}` : null].filter(Boolean).join(' · ')}
+                          </div>
+                        )}
+
                         <p className="font-dm-sans text-wrap-safe" style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.4', borderLeft: '2px solid var(--aura-purple)', paddingLeft: '8px' }}>
 
                           <strong>ACTION:</strong> {leak.recommendations}
@@ -2995,7 +2780,7 @@ function DashboardModule({ windowWidth, auraColor, riskScore, setRiskScore }) {
 
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
 
-                    <span className="font-dm-mono" style={{ fontSize: '12px', fontWeight: '600', color: 'var(--aura-safe)' }}>SYS INTEGRITY: FULLY SECURED</span>
+                    <span className="font-dm-mono" style={{ fontSize: '12px', fontWeight: '600', color: 'var(--aura-safe)' }}>NO KNOWN BREACHES FOUND</span>
 
                     <span style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
 

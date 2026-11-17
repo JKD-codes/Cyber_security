@@ -286,467 +286,933 @@ try:
 except Exception as e:
     print("Warning: ML models not found or failed to load.", e)
 
+import asyncio
+import hashlib
+import ipaddress
+import json
+import time
+from datetime import datetime, timezone
+from typing import Optional
+from urllib.parse import urlparse
+
+try:
+    import phonenumbers
+except ImportError:  # pragma: no cover
+    phonenumbers = None
+
+BROWSER_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+AUDITOR_UA = "CyberShield-Security-Auditor/2.0"
+
+# =========================================================================
+# SCAM / PHISHING DETECTOR
+# =========================================================================
+
+# Public suffixes that take two labels (so registered domain = 3 labels)
+MULTI_PART_SUFFIXES = {
+    "co.in", "net.in", "org.in", "gov.in", "nic.in", "ac.in", "edu.in", "res.in", "firm.in", "gen.in", "ind.in", "bank.in",
+    "co.uk", "org.uk", "ac.uk", "gov.uk", "me.uk", "com.au", "net.au", "org.au", "gov.au", "edu.au", "co.jp", "ne.jp",
+    "com.br", "com.cn", "com.sg", "co.za", "com.mx", "co.nz", "com.tr", "com.pk", "com.bd", "co.id", "com.my", "com.ng",
+    "com.ar", "com.co", "com.ph", "com.vn", "co.kr", "com.hk", "com.tw", "com.ua", "com.eg", "com.sa",
+}
+
+# Brand keyword -> official registered domains
+BRANDS = {
+    "paypal": ["paypal.com", "paypal.me"],
+    "sbi": ["sbi.co.in", "onlinesbi.sbi", "onlinesbi.com", "sbi.bank.in", "sbicard.com", "yonobusiness.sbi", "sbilife.co.in", "sbimf.com"],
+    "yono": ["sbi.co.in", "onlinesbi.sbi", "yonobusiness.sbi"],
+    "hdfc": ["hdfcbank.com", "hdfc.com", "hdfclife.com", "hdfcbank.bank.in", "hdfcergo.com", "hdfcfund.com", "hdfcsec.com"],
+    "icici": ["icicibank.com", "icicidirect.com", "icicilombard.com", "iciciprulife.com", "icici.bank.in"],
+    "axisbank": ["axisbank.com", "axis.bank.in"],
+    "kotak": ["kotak.com", "kotaksecurities.com", "kotak.bank.in"],
+    "paytm": ["paytm.com", "paytm.in", "paytmbank.com", "paytmmoney.com"],
+    "phonepe": ["phonepe.com"],
+    "gpay": ["google.com"],
+    "google": ["google.com", "google.co.in", "google.co.uk", "google.com.au", "google.ca", "google.de", "google.fr", "google.co.jp", "google.com.br","youtube.com", "gmail.com", "googleapis.com", "googleusercontent.com", "gstatic.com", "withgoogle.com"],
+    "gmail": ["google.com", "gmail.com"],
+    "amazon": ["amazon.com", "amazon.in", "amazon.co.uk", "amazon.de", "amazonaws.com", "amazon.jobs", "amazonpay.in"],
+    "flipkart": ["flipkart.com"],
+    "apple": ["apple.com", "icloud.com"],
+    "icloud": ["icloud.com", "apple.com"],
+    "microsoft": ["microsoft.com", "live.com", "office.com", "microsoftonline.com", "outlook.com", "azure.com", "windows.net"],
+    "outlook": ["outlook.com", "live.com", "office.com", "microsoft.com"],
+    "office365": ["office.com", "microsoft.com", "microsoftonline.com"],
+    "netflix": ["netflix.com"],
+    "facebook": ["facebook.com", "fb.com", "meta.com"],
+    "instagram": ["instagram.com"],
+    "whatsapp": ["whatsapp.com", "whatsapp.net"],
+    "telegram": ["telegram.org", "t.me"],
+    "linkedin": ["linkedin.com"],
+    "irctc": ["irctc.co.in"],
+    "uidai": ["uidai.gov.in"],
+    "aadhaar": ["uidai.gov.in"],
+    "incometax": ["incometax.gov.in"],
+    "epfo": ["epfindia.gov.in"],
+    "indiapost": ["indiapost.gov.in"],
+    "airtel": ["airtel.in", "airtel.com"],
+    "jio": ["jio.com", "ril.com"],
+    "bsnl": ["bsnl.co.in"],
+    "dhl": ["dhl.com", "dhl.de"],
+    "fedex": ["fedex.com"],
+    "binance": ["binance.com"],
+    "coinbase": ["coinbase.com"],
+    "metamask": ["metamask.io"],
+    "dropbox": ["dropbox.com"],
+    "docusign": ["docusign.com", "docusign.net"],
+    "chase": ["chase.com"],
+    "wellsfargo": ["wellsfargo.com"],
+    "bankofamerica": ["bankofamerica.com"],
+    "steamcommunity": ["steamcommunity.com", "steampowered.com"],
+    "myntra": ["myntra.com"],
+    "swiggy": ["swiggy.com"],
+    "zomato": ["zomato.com"],
+}
+
+POPULAR_TRUSTED = {
+    "wikipedia.org", "github.com", "x.com", "twitter.com", "reddit.com", "stackoverflow.com", "yahoo.com", "bing.com",
+    "duckduckgo.com", "mozilla.org", "cloudflare.com", "openai.com", "anthropic.com", "claude.ai", "npmjs.com", "python.org",
+    "nytimes.com", "bbc.com", "bbc.co.uk", "thehindu.com", "ndtv.com", "timesofindia.com", "indiatimes.com", "rbi.org.in", "npci.org.in",
+}
+TRUSTED_SUFFIXES = (".gov.in", ".nic.in", ".gov", ".mil", ".edu", ".ac.in", ".edu.in", ".gov.uk", ".bank.in")
+# Hosts on trusted domains where anyone can publish content (common phishing hosting)
+USER_CONTENT_HOSTS = {"sites.google.com", "docs.google.com", "forms.gle", "drive.google.com", "storage.googleapis.com", "firebasestorage.googleapis.com", "s3.amazonaws.com"}
+FREE_HOSTING_DOMAINS = {
+    "github.io", "web.app", "firebaseapp.com", "pages.dev", "vercel.app", "netlify.app", "blogspot.com", "weebly.com",
+    "wixsite.com", "000webhostapp.com", "glitch.me", "repl.co", "replit.app", "ngrok.io", "ngrok-free.app", "herokuapp.com",
+    "webflow.io", "framer.app", "godaddysites.com", "square.site", "carrd.co", "workers.dev", "r2.dev", "surge.sh", "onrender.com",
+}
+URL_SHORTENERS = {"bit.ly", "tinyurl.com", "t.co", "goo.gl", "is.gd", "cutt.ly", "rb.gy", "shorturl.at", "ow.ly", "buff.ly", "rebrand.ly", "t.ly", "tiny.cc", "s.id", "v.gd", "shorturl.gg", "bitly.ws"}
+HIGH_RISK_TLDS = {
+    "xyz", "top", "tk", "ml", "ga", "cf", "gq", "cc", "work", "click", "link", "buzz", "sbs", "cfd", "icu", "rest", "monster",
+    "cyou", "quest", "bond", "lol", "mom", "fit", "loan", "win", "bid", "zip", "mov", "country", "kim", "gdn", "men", "date",
+    "review", "stream", "download", "racing", "accountant", "science", "party", "trade", "webcam", "support", "help", "live",
+}
+MEDIUM_RISK_TLDS = {"info", "online", "site", "shop", "store", "club", "vip", "app", "ru", "su", "pw", "ws", "biz", "today", "space", "website", "tech"}
+PHISH_HOST_WORDS = ["login", "signin", "verify", "verification", "secure", "account", "update", "kyc", "reward", "bonus", "wallet",
+                    "support", "refund", "unlock", "suspend", "confirm", "billing", "auth", "recovery", "claim", "gift", "prize", "offer", "helpdesk"]
+
+all_brand_domains = {d for ds in BRANDS.values() for d in ds}
+
+
+def registered_domain(host: str) -> str:
+    labels = host.lower().strip(".").split(".")
+    if len(labels) <= 2:
+        return ".".join(labels)
+    if ".".join(labels[-2:]) in MULTI_PART_SUFFIXES:
+        return ".".join(labels[-3:])
+    return ".".join(labels[-2:])
+
+
+def is_ip(host: str) -> bool:
+    try:
+        ipaddress.ip_address(host.strip("[]"))
+        return True
+    except ValueError:
+        return False
+
+
+def is_trusted(host: str, reg: str) -> bool:
+    if host in USER_CONTENT_HOSTS:
+        return False
+    return reg in all_brand_domains or reg in POPULAR_TRUSTED or ("." + host).endswith(TRUSTED_SUFFIXES)
+
+
+LEET_MAP = str.maketrans({"0": "o", "1": "l", "3": "e", "4": "a", "5": "s", "7": "t", "$": "s", "@": "a", "!": "i"})
+
+
+def deleet(s: str) -> str:
+    return s.translate(LEET_MAP).replace("rn", "m").replace("vv", "w")
+
+
+def levenshtein(a: str, b: str) -> int:
+    if a == b:
+        return 0
+    prev = list(range(len(b) + 1))
+    for i, ca in enumerate(a, 1):
+        cur = [i]
+        for j, cb in enumerate(b, 1):
+            cur.append(min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (ca != cb)))
+        prev = cur
+    return prev[-1]
+
+
+def brand_hits(text: str):
+    """Return brands mentioned in a host/path string (with lookalike normalisation)."""
+    raw_tokens = [t for t in re.split(r"[^a-z0-9$@!]+", text.lower()) if t]
+    hits = {}
+    for raw in raw_tokens:
+        norm = deleet(raw)
+        for brand in BRANDS:
+            if len(brand) <= 4:
+                matched = norm == brand or norm.startswith(brand) or norm.endswith(brand)
+            else:
+                matched = brand in norm
+            if matched:
+                hits[brand] = ("lookalike" if brand not in raw else "exact", raw)
+            elif len(brand) >= 6 and len(norm) >= 5:
+                # typosquatting: amazom, flipkrt, paypall...
+                for piece in {norm, *re.findall(r"[a-z]+", norm)}:
+                    if abs(len(piece) - len(brand)) <= 2 and 0 < levenshtein(piece, brand) <= (1 if len(brand) < 8 else 2):
+                        hits.setdefault(brand, ("typo", raw))
+    return hits
+
+
+# ---- Threat-intel feed cache (OpenPhish community feed + Phishing Army blocklist) ----
+_feed_cache = {"openphish": (0.0, set(), set()), "army": (0.0, set())}
+_army_task = None
+FEED_TTL = 3600
+
+
+async def _load_openphish(client):
+    ts, urls, hosts = _feed_cache["openphish"]
+    if time.time() - ts < FEED_TTL and urls:
+        return urls, hosts
+    try:
+        r = await client.get("https://raw.githubusercontent.com/openphish/public_feed/refs/heads/main/feed.txt", timeout=6.0)
+        if r.status_code == 200:
+            urls = {u.strip().rstrip("/").lower() for u in r.text.splitlines() if u.strip()}
+            hosts = {urlparse(u).hostname for u in urls if urlparse(u).hostname}
+            _feed_cache["openphish"] = (time.time(), urls, hosts)
+    except Exception as e:
+        print("OpenPhish feed error:", e)
+    return _feed_cache["openphish"][1], _feed_cache["openphish"][2]
+
+
+async def _refresh_army():
+    try:
+        async with httpx.AsyncClient(timeout=20.0, follow_redirects=True) as c:
+            r = await c.get("https://phishing.army/download/phishing_army_blocklist.txt")
+            if r.status_code == 200:
+                doms = {l.strip().lower() for l in r.text.splitlines() if l.strip() and not l.startswith("#")}
+                _feed_cache["army"] = (time.time(), doms)
+    except Exception as e:
+        print("Phishing Army feed error:", e)
+
+
+async def _army_domains():
+    """Large (~3MB) list: load in background, wait at most a few seconds on first use."""
+    global _army_task
+    ts, doms = _feed_cache["army"]
+    if (time.time() - ts > FEED_TTL or not doms) and (_army_task is None or _army_task.done()):
+        _army_task = asyncio.create_task(_refresh_army())
+    if not doms and _army_task:
+        try:
+            await asyncio.wait_for(asyncio.shield(_army_task), timeout=6.0)
+        except Exception:
+            pass
+    return _feed_cache["army"][1]
+
+
+async def _safe_browsing(client, url):
+    key = os.environ.get("GOOGLE_SAFE_BROWSING_KEY")
+    if not key:
+        return None
+    try:
+        body = {
+            "client": {"clientId": "cybershield", "clientVersion": "2.0"},
+            "threatInfo": {
+                "threatTypes": ["MALWARE", "SOCIAL_ENGINEERING", "UNWANTED_SOFTWARE", "POTENTIALLY_HARMFUL_APPLICATION"],
+                "platformTypes": ["ANY_PLATFORM"], "threatEntryTypes": ["URL"], "threatEntries": [{"url": url}],
+            },
+        }
+        r = await client.post(f"https://safebrowsing.googleapis.com/v4/threatMatches:find?key={key}", json=body, timeout=6.0)
+        if r.status_code == 200:
+            return [m.get("threatType") for m in r.json().get("matches", [])]
+    except Exception as e:
+        print("Safe Browsing error:", e)
+    return None
+
+
+async def _domain_age_days(client, reg):
+    try:
+        r = await client.get(f"https://rdap.org/domain/{reg}", timeout=6.0, follow_redirects=True)
+        if r.status_code != 200:
+            return None
+        for ev in r.json().get("events", []):
+            if ev.get("eventAction") == "registration":
+                d = datetime.fromisoformat(ev["eventDate"].replace("Z", "+00:00"))
+                return (datetime.now(timezone.utc) - d).days
+    except Exception as e:
+        print("RDAP error:", e)
+    return None
+
+
+NAT64_NET = ipaddress.ip_network("64:ff9b::/96")
+
+
+async def _resolve_public(host):
+    """Resolve host; returns (resolves, is_public). Blocks SSRF to internal addresses."""
+    try:
+        infos = await asyncio.get_running_loop().getaddrinfo(host, None)
+    except Exception:
+        return False, False
+    for info in infos:
+        ip = ipaddress.ip_address(info[4][0].split("%")[0])
+        if ip.version == 6:
+            if ip.ipv4_mapped:
+                ip = ip.ipv4_mapped
+            elif ip in NAT64_NET:  # DNS64/NAT64 synthesised address -> check the embedded IPv4
+                ip = ipaddress.IPv4Address(int(ip) & 0xFFFFFFFF)
+        if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast or ip.is_unspecified:
+            return True, False
+    return True, True
+
+
+async def _fetch_page(url):
+    """Fetch page with TLS verification; fall back to unverified to still inspect content."""
+    headers = {"User-Agent": BROWSER_UA, "Accept-Language": "en-US,en;q=0.9"}
+    try:
+        async with httpx.AsyncClient(timeout=8.0, follow_redirects=True, max_redirects=6) as c:
+            r = await c.get(url, headers=headers)
+            return r, None
+    except httpx.ConnectError as e:
+        if "CERTIFICATE_VERIFY_FAILED" in str(e) or "SSL" in str(e):
+            try:
+                async with httpx.AsyncClient(timeout=8.0, follow_redirects=True, max_redirects=6, verify=False) as c:
+                    r = await c.get(url, headers=headers)
+                    return r, "tls_invalid"
+            except Exception:
+                return None, "tls_invalid"
+        return None, "unreachable"
+    except Exception:
+        return None, "unreachable"
+
+
+URL_IN_TEXT_RE = re.compile(r"(https?://[^\s<>\"']+|www\.[^\s<>\"']+|\b(?:[a-z0-9-]+\.)+(?:[a-z]{2,24})/[^\s<>\"']*|\b(?:[a-z0-9-]+\.)+(?:com|in|net|org|xyz|top|tk|ml|ga|cf|gq|cc|info|online|site|shop|link|click|live|ly|me|co|io|app|sbs|icu)\b)", re.I)
+SINGLE_URL_RE = re.compile(r"^(https?://)?(\[?[a-z0-9.:-]+\]?)(:\d+)?([/?#]\S*)?$", re.I)
+
+
+def looks_like_url(s: str) -> bool:
+    if " " in s or "." not in s:
+        return False
+    m = SINGLE_URL_RE.match(s)
+    if not m:
+        return False
+    host = m.group(2).strip("[]")
+    return is_ip(host) or bool(re.match(r"^([a-z0-9-]+\.)+[a-z][a-z0-9-]{1,23}$", host, re.I))
+
+
+async def analyze_url(raw_url: str, deep: bool = True):
+    score = 5
+    flags, tactics, passed = [], [], []
+
+    def flag(points, msg, tactic=None):
+        nonlocal score
+        score += points
+        flags.append(msg)
+        if tactic and tactic not in tactics:
+            tactics.append(tactic)
+
+    url = raw_url.strip()
+    scheme_given = bool(re.match(r"^[a-z][a-z0-9+.-]*://", url, re.I))
+    if not scheme_given:
+        url = "https://" + url  # users usually paste bare domains; browsers default to https
+    parsed = urlparse(url)
+    host = (parsed.hostname or "").lower().rstrip(".")
+    if not host:
+        return {"score": 50, "flags": ["Could not parse a valid hostname from this URL"], "tactics": ["Malformed URL"], "passed": [], "trusted": False, "feedHit": False, "host": ""}
+
+    try:
+        ascii_host = host.encode("idna").decode("ascii") if not host.isascii() else host
+    except Exception:
+        ascii_host = host
+    reg = registered_domain(ascii_host)
+    tld = reg.rsplit(".", 1)[-1]
+    trusted = is_trusted(ascii_host, reg)
+    feed_hit = False
+
+    # --- Static URL structure checks ---
+    if parsed.scheme == "http":
+        flag(15, "Uses unencrypted http:// — anything typed on this page can be intercepted", "Protocol Downgrade")
+    if is_ip(host):
+        flag(35, f"Link points to a raw IP address ({host}) instead of a domain name", "IP-Based Hosting")
+    if "@" in (parsed.netloc or ""):
+        flag(40, "URL contains '@' — text before it is ignored by the browser, a classic trick to disguise the real destination", "URL Obfuscation")
+    if not host.isascii() or "xn--" in ascii_host:
+        flag(35, f"Internationalised/punycode domain ({ascii_host}) — can display lookalike letters (homograph attack)", "Homograph Attack")
+    if not is_ip(host):
+        if tld in HIGH_RISK_TLDS:
+            flag(20, f"Uses high-abuse top-level domain '.{tld}' (heavily used in phishing campaigns)", "High-Risk TLD")
+        elif tld in MEDIUM_RISK_TLDS and not trusted:
+            flag(8, f"Uses lower-reputation top-level domain '.{tld}'")
+        sub_labels = ascii_host[: -len(reg)].strip(".").split(".") if ascii_host != reg else []
+        if len([s for s in sub_labels if s and s != "www"]) >= 3:
+            flag(15, f"Excessive subdomain nesting ({ascii_host}) — often used to bury a fake brand name", "Subdomain Abuse")
+        if reg.split(".")[0].count("-") >= 2:
+            flag(10, f"Domain name '{reg}' contains multiple hyphens (common in throwaway scam domains)")
+        if len(ascii_host) > 45:
+            flag(8, "Unusually long hostname")
+    if reg in URL_SHORTENERS:
+        flag(12, f"Link shortener ({reg}) hides the real destination", "Link Masking")
+    if reg in FREE_HOSTING_DOMAINS or ascii_host in USER_CONTENT_HOSTS:
+        flag(12, f"Hosted on free/user-content platform ({reg}) — anyone can publish here, frequently abused for phishing", "Free Hosting Abuse")
+
+    # Brand impersonation (domain label, subdomains & path)
+    if not trusted:
+        host_hits = brand_hits(ascii_host)
+        path_hits = brand_hits(parsed.path + " " + (parsed.query or ""))
+        for brand, (kind, token) in host_hits.items():
+            official = ", ".join(BRANDS[brand][:2])
+            if kind == "typo":
+                flag(45, f"Typosquatting: '{token}' is a misspelling of '{brand}' (official site: {official})", "Lookalike Typosquatting")
+            elif kind == "lookalike":
+                flag(50, f"Lookalike characters: '{token}' imitates '{brand}' using swapped letters/digits (official site: {official})", "Lookalike Typosquatting")
+            else:
+                flag(40, f"Uses brand name '{brand}' but is NOT an official {brand} domain (official: {official})", "Brand Impersonation")
+            if "Brand Impersonation" not in tactics:
+                tactics.append("Brand Impersonation")
+            break  # one brand hit is enough to score
+        if path_hits and not host_hits:
+            brand = next(iter(path_hits))
+            flag(15, f"Mentions '{brand}' in the link path while hosted on unrelated domain '{reg}'", "Brand Impersonation")
+        words = [w for w in PHISH_HOST_WORDS if w in ascii_host]
+        if words:
+            flag(min(10 * len(words), 25), f"Hostname contains phishing bait words: {', '.join(words[:4])}", "Credential Bait Keywords")
+    else:
+        passed.append(f"'{reg}' is a recognised official / high-reputation domain")
+
+    if not deep:
+        return {"score": score, "flags": flags, "tactics": tactics, "passed": passed, "trusted": trusted, "feedHit": feed_hit, "host": ascii_host, "reg": reg}
+
+    # --- Live intelligence (run concurrently) ---
+    async with httpx.AsyncClient(follow_redirects=True, headers={"User-Agent": AUDITOR_UA}) as client:
+        openphish_t = asyncio.create_task(_load_openphish(client))
+        army_t = asyncio.create_task(_army_domains())
+        gsb_t = asyncio.create_task(_safe_browsing(client, url))
+        age_t = asyncio.create_task(_domain_age_days(client, reg)) if not is_ip(host) else None
+        resolve_t = asyncio.create_task(_resolve_public(ascii_host))
+
+        resolves, public = await resolve_t
+        page, fetch_err = (None, None)
+        if not resolves:
+            flag(15, f"Domain '{ascii_host}' does not resolve — fake, unregistered or already taken down", "Dead / Disposable Domain")
+        elif not public:
+            fetch_err = "private"
+            flag(20, "Host resolves to a private/internal network address — not a legitimate public website")
+        else:
+            page, fetch_err = await _fetch_page(url)
+            if fetch_err == "unreachable" and not scheme_given:
+                http_page, http_err = await _fetch_page("http://" + url.split("://", 1)[1])
+                if http_page is not None:
+                    page, fetch_err = http_page, None
+                    flag(10, "Site does not support HTTPS at all", "Protocol Downgrade")
+
+        (op_urls, op_hosts), army = await openphish_t, await army_t
+        gsb = await gsb_t
+        age = await age_t if age_t else None
+
+    # Threat feeds
+    norm_url = url.rstrip("/").lower()
+    final_url = str(page.url) if page is not None else url
+    final_host = (urlparse(final_url).hostname or ascii_host).lower()
+    candidates_hosts = {ascii_host, final_host}
+    if any(u in op_urls for u in {norm_url, final_url.rstrip("/").lower()}) or any(h in op_hosts and not is_trusted(h, registered_domain(h)) for h in candidates_hosts):
+        feed_hit = True
+        flag(90, "LISTED in the OpenPhish live phishing feed — confirmed active phishing site", "Known Phishing (Threat Feed)")
+    if any((h in army or registered_domain(h) in army) and not is_trusted(h, registered_domain(h)) for h in candidates_hosts):
+        feed_hit = True
+        flag(90, "LISTED in the Phishing Army blocklist — reported phishing domain", "Known Phishing (Threat Feed)")
+    if gsb:
+        feed_hit = True
+        flag(90, f"Flagged by Google Safe Browsing ({', '.join(sorted(set(gsb)))})", "Known Malicious (Safe Browsing)")
+    elif gsb == []:
+        passed.append("Not flagged by Google Safe Browsing")
+    if not feed_hit:
+        passed.append(f"Not present in live phishing feeds (OpenPhish{', Phishing Army' if army else ''})")
+
+    # Domain age
+    if age is not None:
+        if age < 30:
+            flag(35, f"Domain was registered only {age} day(s) ago — most phishing domains are under a month old", "Newly Registered Domain")
+        elif age < 180:
+            flag(18, f"Domain is young ({age} days old)", "Newly Registered Domain")
+        elif age > 730:
+            score -= 10
+            passed.append(f"Domain has existed for {age // 365} years")
+
+    # TLS + redirects
+    if fetch_err == "tls_invalid":
+        flag(40, "TLS/SSL certificate is invalid, expired or does not match the domain — your browser would show a security warning", "Invalid Certificate")
+    elif page is not None and final_url.startswith("https://"):
+        passed.append("Valid TLS certificate")
+    if fetch_err == "unreachable" and resolves:
+        flags.append("Site did not respond — content could not be inspected")
+    final_reg = registered_domain(final_host)
+    if page is not None and final_reg != reg:
+        if is_trusted(final_host, final_reg) and not trusted and reg not in URL_SHORTENERS:
+            flags.append(f"Redirects to {final_host}")
+        elif not is_trusted(final_host, final_reg):
+            flag(15, f"Redirects to a different domain: {final_host}", "Redirect Chain")
+            for brand, (kind, token) in brand_hits(final_host).items():
+                flag(35, f"Final destination '{final_host}' impersonates '{brand}'", "Brand Impersonation")
+                break
+
+    # --- Page content inspection (skip for trusted official domains) ---
+    final_trusted = is_trusted(final_host, final_reg)
+    if page is not None and not final_trusted and "html" in page.headers.get("content-type", "html"):
+        try:
+            soup = BeautifulSoup(page.text[:2_000_000], "html.parser")
+            title = (soup.title.get_text(" ", strip=True) if soup.title else "")[:200]
+            text = soup.get_text(" ", strip=True).lower()[:200_000]
+            pw_fields = soup.find_all("input", attrs={"type": re.compile("password", re.I)})
+            sensitive_inputs = soup.find_all("input", attrs={"name": re.compile(r"otp|pin|cvv|card|aadhaar|pan|upi|mpin|ssn|account", re.I)})
+
+            title_brands = brand_hits(title)
+            if title_brands and (pw_fields or sensitive_inputs):
+                b = next(iter(title_brands))
+                flag(40, f"Page titled '{title[:60]}' presents a {b} login/payment form but is hosted on {final_reg}", "Credential Harvesting")
+            elif pw_fields and (flags or (age is not None and age < 365)):
+                flag(15, "Page asks for a password on an unverified domain", "Credential Harvesting")
+            if sensitive_inputs:
+                names = sorted({(i.get("name") or "").lower() for i in sensitive_inputs})[:4]
+                flag(20, f"Page collects sensitive financial/identity fields ({', '.join(names)})", "Credential Harvesting")
+            if final_url.startswith("http://") and pw_fields:
+                flag(30, "Password field served over unencrypted HTTP", "Credential Harvesting (Unencrypted)")
+
+            for form in soup.find_all("form"):
+                action = (form.get("action") or "").strip()
+                if action.startswith(("http://", "https://")):
+                    ah = (urlparse(action).hostname or "").lower()
+                    if ah and registered_domain(ah) != final_reg and not is_trusted(ah, registered_domain(ah)):
+                        flag(25, f"Form submits data to a different domain ({ah})", "Data Exfiltration Form")
+                        break
+                if action.lower().startswith("mailto:") or "api.telegram.org" in action.lower():
+                    flag(35, "Form sends entered data to email/Telegram — typical of phishing kits", "Data Exfiltration Form")
+                    break
+            if "api.telegram.org/bot" in page.text:
+                flag(35, "Page script posts data to a Telegram bot — typical of phishing kits", "Data Exfiltration Form")
+
+            if re.search(r"\b(claim|collect)\b.{0,40}\b(prize|reward|bonus|cashback|gift)\b|\b(you have won|congratulations[, ]+you|lucky winner)\b", text):
+                flag(15, "Page uses prize/reward lures", "Financial Bait (Scraped)")
+            if re.search(r"\b(account (has been |will be )?(suspended|blocked|locked)|verify (your )?kyc|kyc (update|pending|expired)|within 24 hours|immediate action)\b", text):
+                flag(15, "Page uses urgency/suspension panic triggers", "Urgency Trigger (Scraped)")
+            if re.search(r"\b(guaranteed|double your|risk[- ]free)\b.{0,40}\b(returns?|profit|investment|crypto|bitcoin)\b", text):
+                flag(20, "Promises guaranteed / risk-free investment returns", "Investment Fraud")
+            for img in soup.find_all("img"):
+                src = (img.get("src") or "").lower()
+                if ("norton" in src or "mcafee" in src) and not img.find_parent("a"):
+                    flag(10, "Unlinked 'Norton/McAfee secured' badge image (fake trust seal)", "Fake Trust Indicators")
+                    break
+        except Exception as e:
+            print("Content inspection error:", e)
+
+    if trusted and not feed_hit:
+        score = min(score, 10)
+    return {"score": max(score, 0), "flags": flags, "tactics": tactics, "passed": passed, "trusted": trusted,
+            "feedHit": feed_hit, "host": ascii_host, "reg": reg, "ageDays": age, "finalUrl": final_url}
+
+
+def analyze_text_heuristics(text: str):
+    t = text.lower()
+    score, flags, tactics = 8, [], ["Linguistic Heuristics"]
+
+    def rule(pattern, points, msg, tactic):
+        nonlocal score
+        if re.search(pattern, t):
+            score += points
+            flags.append(msg)
+            if tactic not in tactics:
+                tactics.append(tactic)
+
+    if not re.search(r"\b(do not|don't|dont|never)\s+(share|disclose|tell)\b", t):  # genuine OTP SMS say "do not share"
+        rule(r"\b(otp|one[- ]time password|verification code|m?pin|cvv)\b.{0,60}\b(share|send|tell|provide|give|enter)\b|\b(share|send|tell|provide|give)\b.{0,60}\b(otp|verification code|m?pin|cvv)\b",
+             25, "Asks you to share OTP / PIN / CVV — no bank or company ever asks for these", "Credential Harvesting")
+    rule(r"\b(suspend(ed)?|block(ed)?|deactivat\w*|disconnect\w*|terminat\w*|power cut|frozen|freeze)\b", 20, "Threatens account/service suspension or disconnection", "Urgency Trigger")
+    rule(r"\b(urgent|immediately|within \d+ ?(hours?|hrs|minutes?|mins)|today only|last (chance|warning)|tonight)\b", 12, "Creates artificial time pressure", "Urgency Trigger")
+    rule(r"\b(kyc|pan ?card|aadhaar|pension|subsidy|income tax|it department|customs|police|cbi|narcotics|court|rbi)\b", 15, "Invokes government/bank authority (KYC, Aadhaar, Police, Customs...)", "Authority Impersonation")
+    rule(r"\b(lottery|jackpot|you (have )?won|winner|cash ?back|reward|bonus|refund|prize|free gift|lucky draw)\b", 22, "Offers unexpected money, prizes or refunds", "Financial Bait")
+    rule(r"\b(processing|registration|delivery|customs|clearance) (fee|charge)s?\b|\bpay (rs\.?|inr|₹)\s?\d+", 20, "Demands a small upfront fee to release money/parcel", "Advance-Fee Fraud")
+    rule(r"\b(work from home|part[- ]time job|earn (rs\.?|₹|\$)?\s?\d+.{0,20}(daily|per day|a day)|lik(e|ing) (youtube )?videos?|task[- ]based|prepaid task)\b", 30, "Too-good-to-be-true job / task offer", "Job Scam")
+    rule(r"\b(contact|message|ping|join|reply)\b.{0,25}\b(on |via )?(telegram|whatsapp)\b|\bt\.me/|wa\.me/", 12, "Moves the conversation to Telegram/WhatsApp", "Off-Platform Contact")
+    rule(r"\b(bitcoin|crypto|usdt|forex|trading)\b.{0,60}\b(profit|returns?|double|guaranteed)\b", 25, "Promises crypto/trading returns", "Investment Fraud")
+    rule(r"\b(anydesk|teamviewer|quicksupport|rustdesk|screen ?share)\b", 30, "Asks you to install remote-access software", "Remote Access Scam")
+    rule(r"\bdigital arrest\b|\b(arrest|warrant|fir)\b.{0,40}\b(your|you)\b", 30, "Threatens arrest / legal action", "Intimidation")
+    rule(r"\b(click|tap|open|visit)\b.{0,30}\b(link|here|below)\b", 10, "Pushes you to click a link", "Call to Action")
+    rule(r"\*\d{2,3}\*|\b(dial|call) \*?\d{3,}#?", 15, "Asks you to dial a USSD/forwarding code (call-forwarding hijack)", "Call-Forwarding Hijack")
+    rule(r"\b(dear (customer|user|sir/madam)|valued customer)\b", 5, "Generic greeting instead of your name", "Generic Greeting")
+    strong = [f for f in flags if not f.startswith("Generic")]
+    if len(strong) >= 2:
+        score += min(10 * (len(strong) - 1), 30)  # independent scam signals reinforce each other
+    return score, flags, tactics
+
+
+# =========================================================================
 class ScamAnalysisRequest(BaseModel):
     text: str
 
+
 @app.post("/api/analyze/scam")
 async def analyze_scam(req: ScamAnalysisRequest):
-    input_text = req.text.strip()
-    is_url = False
-    # Simple check if it looks like a URL
-    if "." in input_text and (input_text.lower().startswith("http") or input_text.lower().startswith("www") or "." in input_text.split(" ")[0]):
-        is_url = True
+    input_text = req.text.strip()[:5000]
+    if not input_text:
+        raise HTTPException(status_code=400, detail="Input cannot be empty")
+    is_url = looks_like_url(input_text)
 
-    scam_prob = 12 if is_url else 8
-    red_flags = []
-    tactics = []
-    verdict = "SAFE"
-    urgency = "LOW"
-    recommendation = "Message content appears informational. Follow normal safety directories."
-    explanation = "Linguistic heuristics scan and/or live DOM parsing executed."
-
-    if is_url:
-        # URL Logic
-        url_lower = input_text.lower()
-        if not url_lower.startswith("http"):
-            url_to_fetch = "http://" + input_text
-        else:
-            url_to_fetch = input_text
-
-        tactics.append("Domain & DOM Inspection")
-        recommendation = "URL appears consistent with secure public registration records."
-        
-        # 1. Insecure Protocol
-        if url_to_fetch.startswith("http://"):
-            scam_prob += 24
-            red_flags.append("Uses insecure http:// protocol instead of encrypted https://")
-            tactics.append("Protocol Downgrade")
-
-        # 2. High-Risk TLDs
-        scam_tlds = ['.xyz', '.cc', '.top', '.tk', '.ml', '.ga', '.cf', '.gq', '.net.ru', '.work', '.info']
-        for tld in scam_tlds:
-            if tld in url_lower:
-                scam_prob += 35
-                red_flags.append(f"Uses generic high-risk TLD ({tld}) popular in coordinate scam campaigns")
-                tactics.append("Generic TLD Exploitation")
-                break
-
-        # 3. Homoglyphs
-        homoglyphs = [
-          {'keyword': 'paytrn', 'targets': 'Paytm'},
-          {'keyword': 'paytm-rewards', 'targets': 'Paytm Rewards'},
-          {'keyword': 'gpay-bonus', 'targets': 'Google Pay'},
-          {'keyword': 'sbi-kyc', 'targets': 'State Bank of India (SBI)'},
-          {'keyword': 'sbi-login', 'targets': 'SBI Portal'},
-          {'keyword': 'hdfc-secure', 'targets': 'HDFC Bank'},
-          {'keyword': 'amozon', 'targets': 'Amazon India'},
-          {'keyword': 'filpkart', 'targets': 'Flipkart'}
-        ]
-        for h in homoglyphs:
-            if h['keyword'] in url_lower:
-                scam_prob += 48
-                red_flags.append(f"Typosquatting Match: Mimics trusted brand '{h['targets']}' using lookalike letters '{h['keyword']}'")
-                if "Brand Impersonation" not in tactics: tactics.append("Brand Impersonation")
-                if "Lookalike Typosquatting" not in tactics: tactics.append("Lookalike Typosquatting")
-
-        # 4. Live HTML Scraping
-        try:
-            async with httpx.AsyncClient(timeout=8.0, verify=False, follow_redirects=True) as client:
-                resp = await client.get(url_to_fetch)
-                soup = BeautifulSoup(resp.text, 'html.parser')
-                page_text = soup.get_text().lower()
-                
-                # Check for urgency/greed in scraped text
-                if "claim" in page_text and ("prize" in page_text or "bonus" in page_text or "reward" in page_text):
-                    scam_prob += 20
-                    red_flags.append("Page contains high-pressure financial lures (Claim Prize/Bonus)")
-                    tactics.append("Financial Bait (Scraped)")
-
-                if "urgent" in page_text or "account suspended" in page_text or "kyc" in page_text:
-                    scam_prob += 20
-                    red_flags.append("Page uses urgent panic triggers (Suspension/KYC)")
-                    tactics.append("Urgency Trigger (Scraped)")
-
-                # Check for fake trust badges (images with norton/mcafee but no links)
-                img_tags = soup.find_all('img')
-                for img in img_tags:
-                    src = img.get('src', '').lower()
-                    if 'norton' in src or 'mcafee' in src or 'secure' in src:
-                        if not img.find_parent('a'):
-                            scam_prob += 15
-                            red_flags.append("Found unlinked/fake trust badge image (Norton/McAfee/Secure)")
-                            if "Fake Trust Indicators" not in tactics: tactics.append("Fake Trust Indicators")
-                            break
-
-                # Check for suspicious input forms on HTTP
-                if url_to_fetch.startswith("http://"):
-                    password_inputs = soup.find_all('input', type='password')
-                    if password_inputs:
-                        scam_prob += 40
-                        red_flags.append("Insecure page contains a password input field!")
-                        tactics.append("Credential Harvesting (Unencrypted)")
-
-        except Exception as e:
-            print(f"Scraping error for {url_to_fetch}: {e}")
-
-        explanation = f"URL analysis audit for '{input_text}'. Our engine checked protocol handshakes, TLD reputation indices, and executed live DOM scraping to search for Lookalike Impersonations (homoglyphs) and linguistic panic triggers."
-
-    else:
-        # SMS Text Logic
-        lower_text = input_text.lower()
-        tactics.append("Linguistic Heuristics")
-
-        if "otp" in lower_text or "verification code" in lower_text or "pin" in lower_text:
-            scam_prob += 22
-            red_flags.append("Requests confidential security authorization codes (OTP / PIN)")
-            tactics.append("Credential Harvesting")
-
-        if "electricity" in lower_text or "power cut" in lower_text or "disconnection" in lower_text or "suspend" in lower_text or "block" in lower_text:
-            scam_prob += 26
-            red_flags.append("Threatens immediate service deactivation (power lines, bank accounts)")
-            tactics.append("Urgency Trigger")
-
-        if "kyc" in lower_text or "pension" in lower_text or "subsidy" in lower_text or "pan card" in lower_text:
-            scam_prob += 20
-            red_flags.append("References official government updates to build fake authority")
-            tactics.append("Authority Impersonation")
-
-        if "lottery" in lower_text or "reward" in lower_text or "win" in lower_text or "bonus" in lower_text or "refund" in lower_text:
-            scam_prob += 24
-            red_flags.append("Offers unrequested financial refunds or cash bonuses")
-            tactics.append("Financial Bait")
-
-    # Tier 2: Machine Learning Analysis
+    tactics, red_flags, passed = [], [], []
     ml_confidence = 0
-    if ml_vectorizer and ml_model:
-        try:
-            vec_input = ml_vectorizer.transform([input_text])
-            prob = ml_model.predict_proba(vec_input)[0][1] # Probability of class 1 (Scam)
-            ml_confidence = int(prob * 100)
-            
-            if ml_confidence > 60:
-                red_flags.append(f"AI Engine detected anomalous scam phrasing ({ml_confidence}% confidence)")
-                tactics.append("AI Pattern Match")
-                scam_prob += int(ml_confidence * 0.6) # Blend AI score
-        except Exception as e:
-            print("ML Inference Error:", e)
-
-    scam_prob = min(scam_prob, 99)
-    if scam_prob > 70:
-        verdict = "SCAM"
-        urgency = "CRITICAL"
-        if is_url:
-            recommendation = "DO NOT ACCESS. Close the page immediately. Do not submit primary login cards, Aadhaar fields, or passwords."
-        else:
-            recommendation = "DO NOT CLICK ANY LINKS OR DIAL THE SENDER. Block the phone line. Report the number immediately."
-    elif scam_prob > 30:
-        verdict = "SUSPICIOUS"
-        urgency = "HIGH"
-        if is_url:
-            recommendation = "EXERCISE EXTREME CAUTION. Check the domain prefix against official records before filling text fields."
-        else:
-            recommendation = "DO NOT SHARE OTPs. Reach out directly to your banking branch using their official support hotline."
+    if is_url:
+        res = await analyze_url(input_text, deep=True)
+        scam_prob = res["score"]
+        red_flags, tactics, passed = res["flags"], ["Domain & DOM Inspection"] + res["tactics"], res["passed"]
+        age_txt = f" Domain age: {res['ageDays']} days." if res.get("ageDays") is not None else ""
+        explanation = (f"URL audit for '{res['host']}' (registered domain: {res.get('reg', '')}). Checked live phishing feeds, "
+                       f"brand impersonation & typosquatting, domain age (RDAP), TLS certificate, redirects and the live page's forms/content.{age_txt}")
+        feed_hit, trusted = res["feedHit"], res["trusted"]
     else:
-        if not red_flags:
-            if is_url:
-                red_flags = ["No active homoglyph patterns detected", "Certificate matches security registers"]
-            else:
-                red_flags = ["No active threat verbs detected", "Presents generic linguistic structure"]
+        scam_prob, red_flags, tactics = analyze_text_heuristics(input_text)
+        feed_hit, trusted = False, False
+        explanation = "Message analysed with scam-language heuristics and the ML text classifier."
+        # Analyse any links inside the message
+        text_score = scam_prob
+        links = list(dict.fromkeys(m.group(0).rstrip(".,);!'\"") for m in URL_IN_TEXT_RE.finditer(input_text)))[:3]
+        link_scores = []
+        for i, link in enumerate(links):
+            res = await analyze_url(link, deep=(i == 0))
+            feed_hit = feed_hit or res["feedHit"]
+            link_scores.append(res["score"])
+            red_flags += [f"Link {res['host']}: {f}" for f in res["flags"]]
+            tactics += [t for t in res["tactics"] if t not in tactics]
+            if res["trusted"]:
+                passed.append(f"Link {res['host']} points to an official domain")
+        if links:
+            explanation += f" Also inspected {len(links)} embedded link(s)."
+            worst = max(link_scores)
+            scam_prob = max(text_score, worst)
+            if text_score >= 30 and worst >= 30:
+                scam_prob += 15  # scary message + shady link is the classic smishing combo
+            elif text_score >= 30 and all(s <= 10 for s in link_scores):
+                scam_prob -= 10  # message only links to official domains
 
-    if ml_confidence > 0:
-        explanation += f" Machine Learning Contextual Confidence: {ml_confidence}%."
+        # Tier 2: ML classifier (trained on SMS-style text, so only used for messages)
+        if ml_vectorizer is not None and ml_model is not None:
+            try:
+                prob = ml_model.predict_proba(ml_vectorizer.transform([input_text]))[0][1]
+                ml_confidence = int(prob * 100)
+                if ml_confidence > 60:
+                    red_flags.append(f"AI text classifier detected scam phrasing ({ml_confidence}% confidence)")
+                    tactics.append("AI Pattern Match")
+                    scam_prob += int((ml_confidence - 50) * 0.5)
+            except Exception as e:
+                print("ML Inference Error:", e)
+            explanation += f" ML contextual confidence: {ml_confidence}%."
+
+    if feed_hit:
+        scam_prob = max(scam_prob, 95)
+    scam_prob = max(1, min(int(scam_prob), 99))
+
+    if scam_prob >= 70:
+        verdict, urgency = "SCAM", "CRITICAL"
+        recommendation = ("DO NOT OPEN OR ENTER ANY DETAILS. This site shows strong phishing/scam indicators. If you already entered a password or card/UPI details, change them and call your bank immediately (India cyber-fraud helpline: 1930, cybercrime.gov.in)."
+                          if is_url else "DO NOT CLICK ANY LINKS, REPLY OR CALL BACK. Block and report the sender (India: report on Sanchar Saathi 'Chakshu' or call 1930).")
+    elif scam_prob >= 35:
+        verdict, urgency = "SUSPICIOUS", "HIGH"
+        recommendation = ("Proceed with caution. Do not log in or pay through this link — type the official website address yourself instead."
+                          if is_url else "Do not share OTPs or click links. Verify by contacting the organisation through its official number/app.")
+    else:
+        verdict, urgency = "SAFE", "LOW"
+        recommendation = ("No significant risk indicators found. Still verify the address bar before entering passwords."
+                          if is_url else "No strong scam indicators found. Stay cautious with any request for money, OTPs or personal data.")
+        if not red_flags:
+            red_flags = passed or ["No scam indicators detected"]
 
     return {
         "scamProbability": scam_prob,
         "verdict": verdict,
-        "manipulationTactics": tactics,
+        "manipulationTactics": list(dict.fromkeys(tactics)),
         "redFlags": red_flags,
+        "passedChecks": passed,
         "recommendation": recommendation,
         "explanation": explanation,
-        "urgencyLevel": urgency
+        "urgencyLevel": urgency,
     }
 
 
 # =========================================================================
-
+# CREDENTIAL LEAK AUDITOR (XposedOrNot + LeakCheck public index + HIBP Pwned Passwords)
 # =========================================================================
-# CREDENTIAL LEAK AUDITOR (HAVEIBEENPWNED & XPOSEDORNOT INTEGRATION)
-# =========================================================================
-import hashlib
-from typing import Optional
 
-BREACH_CATALOG = {
-    "linkedin": {
-        "source": "LinkedIn Professional Network Leak",
-        "leakType": "Plaintext Passwords, Salted SHA-1 Hashes, Professional Profiles, Email",
-        "riskRating": "CRITICAL",
-        "recommendations": "Rotate this email's password on any platforms where credentials might have been reused. Enable App-based 2FA."
-    },
-    "adobe": {
-        "source": "Adobe Creative Cloud Data Breach",
-        "leakType": "Password Hints, Symmetric-encrypted Passwords, Email Addresses",
-        "riskRating": "CRITICAL",
-        "recommendations": "Change any legacy password hints. Modern attackers decode legacy encrypted hashes."
-    },
-    "yahoo": {
-        "source": "Yahoo Global Account Exposure",
-        "leakType": "Security Questions & Answers, MD5/Bcrypt Hashes, Telephone Records",
-        "riskRating": "CRITICAL",
-        "recommendations": "Disable security question challenge-response mechanisms; switch to hardware security keys or authenticator apps."
-    },
-    "canva": {
-        "source": "Canva Graphic Design Platform Dump",
-        "leakType": "Passwords (Bcrypt-hashed), Full Names, City/Country",
-        "riskRating": "HIGH",
-        "recommendations": "Ensure password used on Canva is completely unique from your primary email."
-    },
-    "dunzo": {
-        "source": "Dunzo On-Demand Delivery Breach",
-        "leakType": "Phone Numbers, Email Addresses, Delivery Coordinates",
-        "riskRating": "HIGH",
-        "recommendations": "Exercise vigilance against targeted SMS delivery scams requesting OTP authorizations."
-    },
-    "bigbasket": {
-        "source": "BigBasket E-Commerce Dump",
-        "leakType": "Full Names, Email IDs, Password Hashes, PIN Codes, Mobile Numbers",
-        "riskRating": "CRITICAL",
-        "recommendations": "Immediately update UPI and payment credentials associated with your e-commerce profile."
-    },
-    "airindia": {
-        "source": "SITA / Air India Passenger Data Breach",
-        "leakType": "Frequent Flyer Records, Passport Details, Ticket Information, Credit Data",
-        "riskRating": "CRITICAL",
-        "recommendations": "Audit credit card statements for anomalous travel/forex charges. Request renewed card numbers."
-    },
-    "dominos": {
-        "source": "Domino's India 180M Order Exposure",
-        "leakType": "Customer Names, Delivery Locations, Phone Numbers, Internal Order Values",
-        "riskRating": "HIGH",
-        "recommendations": "Beware of social engineering calls posing as food delivery executives verifying address details."
-    },
-    "mobikwik": {
-        "source": "MobiKwik Payment KYC Dump",
-        "leakType": "Aadhaar Card Scans, PAN Numbers, Mobile Numbers, Bank Account Hashes",
-        "riskRating": "CRITICAL",
-        "recommendations": "Lock biometric authentication via mAadhaar UIDAI portal immediately. Request fresh netbanking PINs."
+def _norm_breach_name(name: str) -> str:
+    n = (name or "").lower()
+    n = re.sub(r"\.(com|net|org|ru|in|io|co|br|de|fr|uk|cn|jp|me|tv|info|biz|es|it|pl|nl|kr|vn|id|us|ca|au)\b", "", n)
+    return re.sub(r"[^a-z0-9]", "", n)
+
+
+_CATALOG = None
+
+
+def _breach_catalog():
+    """Index of the bundled XposedOrNot breach catalog (data classes, dates, record counts)."""
+    global _CATALOG
+    if _CATALOG is None:
+        _CATALOG = {}
+        try:
+            path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "breach_catalog.json")
+            with open(path, encoding="utf-8") as f:
+                for b in json.load(f).get("exposedBreaches", []):
+                    _CATALOG.setdefault(_norm_breach_name(b.get("breachID", "")), b)
+                    if b.get("domain"):
+                        _CATALOG.setdefault(_norm_breach_name(b["domain"]), b)
+        except Exception as e:
+            print("Breach catalog load error:", e)
+    return _CATALOG
+
+
+async def _xon_details(client, names):
+    """Fetch details for breaches missing from the bundled catalog."""
+    out = {}
+    async def one(n):
+        try:
+            r = await client.get("https://api.xposedornot.com/v1/breaches", params={"breach_id": n}, timeout=6.0)
+            if r.status_code == 200:
+                lst = r.json().get("exposedBreaches") or []
+                if lst:
+                    out[_norm_breach_name(n)] = lst[0]
+        except Exception:
+            pass
+    await asyncio.gather(*(one(n) for n in names[:15]))
+    return out
+
+
+SENSITIVE_CLASSES = ["password", "credit card", "bank", "passport", "social security", "ssn", "government issued", "aadhaar",
+                     "security questions", "pan", "financial", "partial credit", "auth tokens", "private messages", "health", "biometric"]
+PERSONAL_CLASSES = ["phone", "address", "date of birth", "dob", "geographic", "ip address", "physical", "gender", "names", "employer"]
+
+
+def _rate(classes):
+    low = " ".join(c.lower() for c in classes)
+    if any(k in low for k in SENSITIVE_CLASSES):
+        return "CRITICAL"
+    if any(k in low for k in PERSONAL_CLASSES):
+        return "HIGH"
+    return "MEDIUM"
+
+
+def _recommend(classes, name):
+    low = " ".join(c.lower() for c in classes)
+    tips = []
+    if "password" in low:
+        tips.append(f"Change your {name} password and every site where you reused it; turn on 2FA")
+    if "phone" in low:
+        tips.append("expect targeted SMS/WhatsApp scams and never share OTPs")
+    if any(k in low for k in ["credit card", "bank", "financial", "upi"]):
+        tips.append("watch bank statements and consider re-issuing the card")
+    if any(k in low for k in ["aadhaar", "passport", "government", "pan"]):
+        tips.append("lock Aadhaar biometrics via mAadhaar and monitor for identity misuse")
+    if "address" in low or "date of birth" in low:
+        tips.append("be wary of callers who 'verify' your address/DOB")
+    if not tips:
+        tips.append(f"Change your password on {name} if you still use it and watch for phishing emails referencing it")
+    s = "; ".join(tips)
+    return s[0].upper() + s[1:] + "."
+
+
+async def _query_xon(client, email):
+    try:
+        r = await client.get(f"https://api.xposedornot.com/v1/check-email/{email}", timeout=8.0)
+        if r.status_code == 404:
+            return {"ok": True, "names": []}
+        if r.status_code == 200:
+            d = r.json()
+            if d.get("Error") == "Not found":
+                return {"ok": True, "names": []}
+            names = []
+            for item in d.get("breaches", []):
+                names.extend(item if isinstance(item, list) else [item])
+            return {"ok": True, "names": [n for n in names if isinstance(n, str)]}
+        return {"ok": False, "error": f"HTTP {r.status_code}"}
+    except Exception as e:
+        return {"ok": False, "error": str(e) or type(e).__name__}
+
+
+async def _query_leakcheck(client, query):
+    try:
+        r = await client.get("https://leakcheck.io/api/public", params={"check": query}, timeout=8.0)
+        d = r.json() if r.headers.get("content-type", "").startswith("application/json") or r.text.startswith("{") else {}
+        if d.get("success"):
+            return {"ok": True, "found": d.get("found", 0), "fields": d.get("fields", []), "sources": d.get("sources", [])}
+        if str(d.get("error", "")).lower() == "not found":
+            return {"ok": True, "found": 0, "fields": [], "sources": []}
+        return {"ok": False, "error": d.get("error") or f"HTTP {r.status_code}"}
+    except Exception as e:
+        return {"ok": False, "error": str(e) or type(e).__name__}
+
+
+def _build_matches(xon_names, lc_sources, details):
+    catalog = _breach_catalog()
+    merged = {}
+    for n in xon_names:
+        merged.setdefault(_norm_breach_name(n), {"name": n, "date": None, "via": {"XposedOrNot"}})
+    for s in lc_sources:
+        key = _norm_breach_name(s.get("name", ""))
+        if not key:
+            continue
+        entry = merged.setdefault(key, {"name": s.get("name"), "date": s.get("date") or None, "via": set()})
+        entry["via"].add("LeakCheck")
+        entry["date"] = entry["date"] or s.get("date") or None
+
+    matches = []
+    for key, e in merged.items():
+        info = catalog.get(key) or details.get(key)
+        classes = (info or {}).get("exposedData") or []
+        date = e["date"] or ((info or {}).get("breachedDate") or "")[:7] or None
+        rating = _rate(classes) if classes else "HIGH"
+        if info and info.get("passwordRisk") in ("plaintext", "easytocrack"):
+            rating = "CRITICAL"
+        matches.append({
+            "source": f"{e['name']}" + (f" ({date})" if date and date[:4] not in e["name"] else ""),
+            "breachName": e["name"],
+            "date": date,
+            "domain": (info or {}).get("domain") or None,
+            "records": (info or {}).get("exposedRecords"),
+            "description": (info or {}).get("exposureDescription"),
+            "leakType": ", ".join(classes) if classes else "Data classes not disclosed by the public index (assume email/phone + password)",
+            "exposedData": classes,
+            "passwordRisk": (info or {}).get("passwordRisk"),
+            "riskRating": rating,
+            "recommendations": _recommend(classes or ["password"], (info or {}).get("domain") or e["name"]),
+            "foundIn": sorted(e["via"]),
+        })
+    order = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2}
+    matches.sort(key=lambda m: (order.get(m["riskRating"], 3), -(int((m["date"] or "0")[:4]) if (m["date"] or "")[:4].isdigit() else 0)))
+    return matches
+
+
+def _result(target, typ, matches, sources_checked, extra_fields=None, extra=None):
+    any_ok = any(s["ok"] for s in sources_checked)
+    if not any_ok:
+        return {
+            "status": "error", "target": target, "type": typ, "breached": None, "verified": False, "count": 0,
+            "riskScore": None, "matches": [], "sourcesChecked": sources_checked,
+            "summary": "Could not reach the breach databases right now — this result is UNVERIFIED. Please retry in a minute.",
+        }
+    exposed = sorted({c for m in matches for c in m["exposedData"]} | set(extra_fields or []))
+    failed = [s["name"] for s in sources_checked if not s["ok"]]
+    note = f" (Note: {', '.join(failed)} unavailable — results may be incomplete.)" if failed else ""
+    checked = ", ".join(s["name"] for s in sources_checked if s["ok"])
+    if matches:
+        crit = sum(m["riskRating"] == "CRITICAL" for m in matches)
+        pw = any("password" in c.lower() for c in exposed)
+        score = min(98, 45 + 4 * len(matches) + 3 * crit + (15 if pw else 0))
+        summary = f"Found in {len(matches)} data breach{'es' if len(matches) != 1 else ''} ({crit} critical) across {checked}." + note
+    else:
+        score = 8
+        summary = f"No breaches found in {checked}." + note
+    res = {
+        "status": "success", "target": target, "type": typ, "breached": bool(matches), "verified": True,
+        "count": len(matches), "riskScore": score, "matches": matches, "exposedDataTypes": exposed,
+        "sourcesChecked": sources_checked, "summary": summary,
     }
-}
+    res.update(extra or {})
+    return res
+
+
+EMAIL_RE = re.compile(r"^[A-Za-z0-9._%+'-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$")
+
 
 class CredentialCheckRequest(BaseModel):
     target: str
     mode: Optional[str] = "auto"
 
+
 @app.api_route("/api/check/credential", methods=["GET", "POST"])
 async def check_credential(req: Optional[CredentialCheckRequest] = None, target: Optional[str] = None, mode: Optional[str] = "auto"):
-    search_target = ""
-    search_mode = "auto"
-    if req:
-        search_target = req.target
-        search_mode = req.mode or "auto"
-    elif target:
-        search_target = target
-        search_mode = mode or "auto"
-
+    search_target = (req.target if req else target) or ""
+    det_mode = ((req.mode if req else mode) or "auto").lower()
     clean = search_target.strip()
     if not clean:
-        return {"status": "error", "message": "Search target cannot be empty", "breached": False, "matches": []}
+        return {"status": "error", "message": "Search target cannot be empty", "breached": None, "matches": [], "summary": "Search target cannot be empty."}
 
-    det_mode = search_mode
     if det_mode == "auto":
+        digits = re.sub(r"\D", "", clean)
         if "@" in clean and " " not in clean:
             det_mode = "email"
-        elif re.match(r"^(\+?\d[\d\s\-]{8,14}\d)$", clean):
+        elif re.fullmatch(r"\+?[\d\s\-().]{7,22}", clean) and 7 <= len(digits) <= 15:
             det_mode = "phone"
-        elif len(clean) >= 4 and " " not in clean and ("." not in clean or not clean.endswith(".com")):
+        else:
             det_mode = "password"
-        else:
-            det_mode = "email"
 
-    # 1. EMAIL AUDIT
-    if det_mode == "email":
-        email_clean = clean.lower()
-        matches = []
-        try:
-            async with httpx.AsyncClient(timeout=6.0, follow_redirects=True) as client:
-                resp = await client.get(
-                    f"https://api.xposedornot.com/v1/check-email/{email_clean}",
-                    headers={"User-Agent": "CyberShield-Security-Auditor/1.0"}
-                )
-                if resp.status_code == 404 or (resp.status_code == 200 and resp.json().get("Error") == "Not found"):
-                    return {
-                        "status": "success",
-                        "target": clean,
-                        "type": "email",
-                        "breached": False,
-                        "count": 0,
-                        "riskScore": 12,
-                        "matches": [],
-                        "summary": "Zero compromised entries found in global leak registries."
-                    }
-                elif resp.status_code == 200:
-                    data = resp.json()
-                    raw_breaches = data.get("breaches", [])
-                    breach_names = []
-                    for item in raw_breaches:
-                        if isinstance(item, list):
-                            breach_names.extend(item)
-                        elif isinstance(item, str):
-                            breach_names.append(item)
-
-                    for b_name in breach_names[:8]:
-                        key = b_name.lower().replace(" ", "").replace("-", "")
-                        catalog_match = None
-                        for k, v in BREACH_CATALOG.items():
-                            if k in key or key in k:
-                                catalog_match = v
-                                break
-
-                        if catalog_match:
-                            matches.append({
-                                "source": catalog_match["source"],
-                                "leakType": catalog_match["leakType"],
-                                "riskRating": catalog_match["riskRating"],
-                                "recommendations": catalog_match["recommendations"]
-                            })
-                        else:
-                            matches.append({
-                                "source": f"{b_name} Incident Record",
-                                "leakType": "Account Identifier, Authentication Tokens, Password Hashes",
-                                "riskRating": "HIGH",
-                                "recommendations": f"Rotate password on {b_name} and any related digital platforms immediately."
-                            })
-
-                    if matches:
-                        return {
-                            "status": "success",
-                            "target": clean,
-                            "type": "email",
-                            "breached": True,
-                            "count": len(breach_names),
-                            "riskScore": 88 if any(m["riskRating"] == "CRITICAL" for m in matches) else 65,
-                            "matches": matches,
-                            "summary": f"Exposed in {len(breach_names)} verified data breaches across dark web indices."
-                        }
-                    else:
-                        return {
-                            "status": "success",
-                            "target": clean,
-                            "type": "email",
-                            "breached": False,
-                            "count": 0,
-                            "riskScore": 12,
-                            "matches": [],
-                            "summary": "Zero compromised entries found in global leak registries."
-                        }
-        except Exception as e:
-            print("Live email audit error, checking fallback:", e)
-
-        # Fallback local check
-        if any(w in email_clean for w in ["deepmind", "admin", "test", "demo", "leak", "hacked", "pwned"]):
-            fallback_matches = [
-                {
-                    "source": "Android Dev & Cloud Infrastructure Exposure (2024)",
-                    "leakType": "API Keys, Deployment Environment Variables, Session Tokens",
-                    "riskRating": "CRITICAL",
-                    "recommendations": "Deauthorize active API keys immediately and rotate root credentials."
-                },
-                {
-                    "source": "Global CDN Edge Leak (2025)",
-                    "leakType": "Session Tokens, Email Address, Request Headers",
-                    "riskRating": "HIGH",
-                    "recommendations": "Clear all browser token caches and re-issue authentication cookies."
-                }
+    async with httpx.AsyncClient(follow_redirects=True, headers={"User-Agent": AUDITOR_UA}) as client:
+        # 1. EMAIL
+        if det_mode == "email":
+            email = clean.lower()
+            if not EMAIL_RE.match(email):
+                return {"status": "error", "type": "email", "target": clean, "breached": None, "matches": [], "summary": "That does not look like a valid email address."}
+            xon, lc = await asyncio.gather(_query_xon(client, email), _query_leakcheck(client, email))
+            xon_names = xon.get("names", []) if xon["ok"] else []
+            lc_sources = lc.get("sources", []) if lc["ok"] else []
+            catalog = _breach_catalog()
+            missing = [n for n in xon_names if _norm_breach_name(n) not in catalog]
+            details = await _xon_details(client, missing) if missing else {}
+            matches = _build_matches(xon_names, lc_sources, details)
+            sources = [
+                {"name": "XposedOrNot", "ok": xon["ok"], "found": len(xon_names), **({"error": xon["error"]} if not xon["ok"] else {})},
+                {"name": "LeakCheck", "ok": lc["ok"], "found": lc.get("found", 0), **({"error": lc["error"]} if not lc["ok"] else {})},
             ]
-            return {
-                "status": "success",
-                "target": clean,
-                "type": "email",
-                "breached": True,
-                "count": 2,
-                "riskScore": 85,
-                "matches": fallback_matches,
-                "summary": "Exposed in simulated/local security test indices."
-            }
-        else:
-            return {
-                "status": "success",
-                "target": clean,
-                "type": "email",
-                "breached": False,
-                "count": 0,
-                "riskScore": 12,
-                "matches": [],
-                "summary": "Zero compromised records found for this address."
-            }
+            extra_fields = [f.replace("_", " ").title() for f in lc.get("fields", [])] if lc["ok"] else []
+            return _result(clean, "email", matches, sources, extra_fields,
+                           {"totalRecordsIndexed": lc.get("found", 0) if lc["ok"] else None})
 
-    # 2. PASSWORD AUDIT
-    elif det_mode == "password":
+        # 2. PHONE
+        if det_mode == "phone":
+            e164 = None
+            region_info = {}
+            if phonenumbers:
+                try:
+                    num = phonenumbers.parse(clean, None if clean.startswith("+") else "IN")
+                    if not phonenumbers.is_possible_number(num):
+                        return {"status": "error", "type": "phone", "target": clean, "breached": None, "matches": [],
+                                "summary": "That phone number is not a possible number. Include the country code, e.g. +91 98765 43210."}
+                    e164 = phonenumbers.format_number(num, phonenumbers.PhoneNumberFormat.E164)
+                    from phonenumbers import geocoder, carrier
+                    region_info = {"region": geocoder.description_for_number(num, "en") or None,
+                                   "carrier": carrier.name_for_number(num, "en") or None,
+                                   "validNumber": phonenumbers.is_valid_number(num)}
+                except Exception:
+                    return {"status": "error", "type": "phone", "target": clean, "breached": None, "matches": [],
+                            "summary": "Could not parse that phone number. Include the country code, e.g. +91 98765 43210."}
+            else:
+                digits = re.sub(r"\D", "", clean)
+                e164 = "+" + (digits if clean.startswith("+") or len(digits) > 10 else "91" + digits)
+            lc = await _query_leakcheck(client, e164.lstrip("+"))
+            lc_sources = lc.get("sources", []) if lc["ok"] else []
+            matches = _build_matches([], lc_sources, {})
+            # For phone lookups the public index reports the combined data fields exposed alongside the number
+            fields = [f.replace("_", " ").title() for f in lc.get("fields", [])] if lc["ok"] else []
+            for m in matches:
+                if not m["exposedData"] and fields:
+                    m["exposedData"] = fields
+                    m["leakType"] = ", ".join(fields) + " (combined fields across leaks)"
+                    m["riskRating"] = _rate(fields)
+                    m["recommendations"] = _recommend(fields, m["breachName"])
+            sources = [{"name": "LeakCheck", "ok": lc["ok"], "found": lc.get("found", 0), **({"error": lc["error"]} if not lc["ok"] else {})}]
+            return _result(e164, "phone", matches, sources, fields, {"normalized": e164, **region_info,
+                           "totalRecordsIndexed": lc.get("found", 0) if lc["ok"] else None})
+
+        # 3. PASSWORD (k-anonymity: only the first 5 SHA-1 chars leave the server)
+        sha1 = hashlib.sha1(clean.encode()).hexdigest().upper()
+        prefix, suffix = sha1[:5], sha1[5:]
         try:
-            sha1 = hashlib.sha1(clean.encode()).hexdigest().upper()
-            prefix, suffix = sha1[:5], sha1[5:]
-            async with httpx.AsyncClient(timeout=6.0) as client:
-                resp = await client.get(
-                    f"https://api.pwnedpasswords.com/range/{prefix}",
-                    headers={"User-Agent": "CyberShield-Security-Auditor/1.0"}
-                )
-                if resp.status_code == 200:
-                    for line in resp.text.splitlines():
-                        if line.startswith(suffix):
-                            count = int(line.split(":")[1])
-                            return {
-                                "status": "success",
-                                "target": "••••••••",
-                                "type": "password",
-                                "breached": True,
-                                "count": count,
-                                "riskScore": 95,
-                                "matches": [
-                                    {
-                                        "source": f"Dark Web Credential Dumps ({count:,} recorded exposures)",
-                                        "leakType": "Plaintext Password / Hash Dump",
-                                        "riskRating": "CRITICAL",
-                                        "recommendations": "Never reuse this password anywhere. Automated botnets continuously spray this exact string in credential-stuffing attacks."
-                                    }
-                                ],
-                                "summary": f"This password has been exposed {count:,} times in public data breaches!"
-                            }
+            resp = await client.get(f"https://api.pwnedpasswords.com/range/{prefix}", headers={"Add-Padding": "true"}, timeout=8.0)
+            if resp.status_code != 200:
+                raise Exception(f"HTTP {resp.status_code}")
+            count = 0
+            for line in resp.text.splitlines():
+                h, _, c = line.partition(":")
+                if h.strip() == suffix:
+                    count = int(c)
+                    break
         except Exception as e:
-            print("Live password audit error:", e)
-
-        return {
-            "status": "success",
-            "target": "••••••••",
-            "type": "password",
-            "breached": False,
-            "count": 0,
-            "riskScore": 10,
-            "matches": [],
-            "summary": "This password does NOT appear in known public data breach corpuses (800M+ hashes checked)."
-        }
-
-    # 3. PHONE AUDIT
-    elif det_mode == "phone":
-        matches = [
-            {
-                "source": "Indian Telecom 750M Scraped Registry (2024)",
-                "leakType": "Subscriber MSISDN, Primary Circle, Approximate Cell Tower Location",
-                "riskRating": "HIGH",
-                "recommendations": "Lock your biometrics via UIDAI mAadhaar app. Beware of WhatsApp OTP call-forwarding codes (*401*)."
-            },
-            {
-                "source": "Regional Delivery & E-Commerce Aggregator Dump",
-                "leakType": "Contact Number, Address Records, Delivery History",
-                "riskRating": "MEDIUM",
-                "recommendations": "Do not verify unexpected parcel delivery OTPs over phone calls."
+            return {"status": "error", "type": "password", "target": "••••••••", "breached": None, "matches": [],
+                    "summary": f"Could not reach Pwned Passwords ({e}) — result UNVERIFIED.", "sourcesChecked": [{"name": "HIBP Pwned Passwords", "ok": False}]}
+        if count:
+            return {
+                "status": "success", "target": "••••••••", "type": "password", "breached": True, "verified": True, "count": count,
+                "riskScore": 95,
+                "matches": [{"source": f"Pwned Passwords corpus ({count:,} sightings)", "leakType": "Plaintext password seen in breach dumps",
+                             "riskRating": "CRITICAL", "exposedData": ["Passwords"],
+                             "recommendations": "Never use this password anywhere. Attackers use it in credential-stuffing and dictionary attacks."}],
+                "sourcesChecked": [{"name": "HIBP Pwned Passwords", "ok": True, "found": count}],
+                "summary": f"This password has appeared {count:,} times in public data breaches!",
             }
-        ]
-        return {
-            "status": "success",
-            "target": clean,
-            "type": "phone",
-            "breached": True,
-            "count": len(matches),
-            "riskScore": 72,
-            "matches": matches,
-            "summary": "Mobile number patterns matched entries in known regional scraped directories."
-        }
+        return {"status": "success", "target": "••••••••", "type": "password", "breached": False, "verified": True, "count": 0,
+                "riskScore": 10, "matches": [], "sourcesChecked": [{"name": "HIBP Pwned Passwords", "ok": True, "found": 0}],
+                "summary": "This password does not appear in the HIBP Pwned Passwords corpus (~1 billion leaked passwords)."}

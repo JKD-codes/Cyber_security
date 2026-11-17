@@ -2579,7 +2579,7 @@ function DashboardModule({ windowWidth, auraColor, riskScore, setRiskScore }) {
                 { label: 'elon@tesla.com', mode: 'email', val: 'elon@tesla.com' },
                 { label: 'test@gmail.com', mode: 'email', val: 'test@gmail.com' },
                 { label: '+91 98765 43210', mode: 'phone', val: '+91 98765 43210' },
-                { label: 'P@ssw0rd123', mode: 'password', val: 'P@ssw0rd123' },
+                { label: 'Sample Passphrase', mode: 'password', val: 'sample_test_phrase' },
               ].map((pill, i) => (
                 <button
                   key={i}
@@ -2601,7 +2601,7 @@ function DashboardModule({ windowWidth, auraColor, riskScore, setRiskScore }) {
 
                 placeholder={
 
-                  auditMode === 'password' ? 'Enter password to check k-anonymity (e.g. P@ssw0rd123)' :
+                  auditMode === 'password' ? 'Enter password to check k-anonymity (e.g. sample_test_phrase)' :
 
                   auditMode === 'phone' ? 'Enter phone number (e.g. +91 98765 43210)' :
 

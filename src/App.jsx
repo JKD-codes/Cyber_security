@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { buildFamilyAdvice } from './familyAdvisor';
 
 import { 
 
@@ -5559,134 +5560,6 @@ function AttackSimulatorModule({ windowWidth }) {
 
    ========================================================================= */
 
-const MOCK_SAFETY_DIRECTORY = {
-
-  Elder: {
-
-    threatLevel: 'High',
-
-    threatType: "Electricity Overdue Disconnection Phone Scams",
-
-    simpleSummary: "This call is completely fake. Scammers are creating artificial panic to steal your savings. Your home electricity line is absolutely secure.",
-
-    whatToDoNow: [
-
-      "HANG UP the phone immediately. Do not dial the number back.",
-
-      "Never download screensharing applications like AnyDesk or TeamViewer on their command.",
-
-      "Ask a younger family member to verify your bills or contact your local electricity sub-station directly."
-
-    ],
-
-    warningSignsExplained: [
-
-      "The caller dispatched warning texts from a standard 10-digit mobile number, not official telecom utility handles.",
-
-      "They threatened deactivation within 30 minutes, an artificial timeline designed to bypass clear thinking.",
-
-      "They asked you to perform payment audits on unverified mobile links."
-
-    ],
-
-    shouldCallPolice: true,
-
-    emotionalSupport: "Take a slow breath. You are completely safe, and your home utilities are secure. Scammers target panic—we isolate them.",
-
-    helplines: [
-
-      { name: "National Cyber Crime Support", number: "1930" },
-
-      { name: "Senior Citizen Safety Line", number: "14567" }
-
-    ]
-
-  },
-
-  Adult: {
-
-    threatLevel: 'Critical',
-
-    threatType: "Advance QR Code Refund Scams",
-
-    simpleSummary: "Scammers are impersonating military personnel or property tenants, tricking you into scanning payment requests to claim cash.",
-
-    whatToDoNow: [
-
-      "Do not scan any WhatsApp QR images to receive refund deposits.",
-
-      "Remember that typing your UPI PIN always sends money, it never claims money.",
-
-      "Decline unrequested money demand tokens on Google Pay or PhonePe."
-
-    ],
-
-    warningSignsExplained: [
-
-      "The buyer agreed to full rents instantly without visiting your listing.",
-
-      "They insisted on depositing advance bookings via custom scanner codes.",
-
-      "They shared graphic tenant cards claiming army service to gain instant trust."
-
-    ],
-
-    shouldCallPolice: true,
-
-    emotionalSupport: "Stay composed. Cut off payment triggers. Block the caller's payment handles.",
-
-    helplines: [
-
-      { name: "National Cyber Crime Helpline", number: "1930" }
-
-    ]
-
-  },
-
-  Teen: {
-
-    threatLevel: 'Medium',
-
-    threatType: "Part-Time Video Like Schemes",
-
-    simpleSummary: "This is a digital Ponzi scheme targeting pocket savings. They pay small sums first, then lock your larger deposits in Telegram groups.",
-
-    whatToDoNow: [
-
-      "Block the recruiter WhatsApp lines immediately.",
-
-      "Do not transfer cash to unlock secondary tasks or invite classmates.",
-
-      "Do not share verification photos of your identity logs."
-
-    ],
-
-    warningSignsExplained: [
-
-      "The offer was sent from international codes (+62, +84) promising daily tasks can pay ₹8,000.",
-
-      "They directed you to a closed Telegram group where 'cryptocurrency buys' are mandated.",
-
-      "They demanded you deposit registration cards to claim earlier work credits."
-
-    ],
-
-    shouldCallPolice: false,
-
-    emotionalSupport: "You did the smart thing by auditing this before paying. Block the channel and protect your pocket money.",
-
-    helplines: [
-
-      { name: "National Cyber Crime Portal", number: "1930" }
-
-    ]
-
-  }
-
-};
-
-
-
 function FamilySafetyModule({ windowWidth }) {
 
   const [selectedPersona, setSelectedPersona] = useState('Elder');
@@ -5720,9 +5593,9 @@ function FamilySafetyModule({ windowWidth }) {
     setAdvice(null);
 
     setTimeout(() => {
-      setAdvice(MOCK_SAFETY_DIRECTORY[targetPersona] || MOCK_SAFETY_DIRECTORY.Elder);
+      setAdvice(buildFamilyAdvice(finalDesc, targetPersona));
       setLoading(false);
-    }, 1000);
+    }, 400); // brief pause so the loader is visible; analysis itself is instant
   };
 
 
@@ -5997,6 +5870,10 @@ function FamilySafetyModule({ windowWidth }) {
 
               {advice.threatLevel.toUpperCase()} LEVEL RISK RATING
 
+            </div>
+
+            <div className="font-dm-mono text-wrap-safe" style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '8px' }}>
+              DETECTED: {advice.threatType}{advice.confidence ? ` · MATCH CONFIDENCE: ${advice.confidence.toUpperCase()}` : ''}
             </div>
 
           </div>

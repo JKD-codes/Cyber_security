@@ -18,204 +18,375 @@ async def health_check():
     return {"status": "ok", "message": "FastAPI security backend is active!"}
 
 import re
+from urllib.parse import urlparse, urljoin
 
-def analyze_headers(headers: dict):
-    issues = []
-    passed = []
-    
-    # Lowercase keys for case-insensitive lookup
-    headers = {k.lower(): v for k, v in headers.items()}
-    
-    # 1. X-XSS-Protection
-    xss = headers.get("x-xss-protection", "")
-    if xss == "0":
-        passed.append("Modern X-XSS-Protection disabled (Safe from XS-Search attacks)")
-    elif xss.startswith("1"):
-        issues.append({
-            "id": "xss_protection",
-            "title": "Outdated X-XSS-Protection Header",
-            "severity": "MEDIUM",
-            "description": "Setting X-XSS-Protection to 1 is considered dangerous on modern browsers as it enables XS-Search attacks.",
-            "solution": "Set 'X-XSS-Protection: 0' and rely on a strong Content-Security-Policy instead."
-        })
+SEVERITY_PENALTY = {"CRITICAL": 40, "HIGH": 20, "MEDIUM": 10, "LOW": 4, "INFO": 0}
+
+
+def _issue(id_, title, severity, description, solution):
+    return {"id": id_, "title": title, "severity": severity, "description": description, "solution": solution}
+
+
+def _directive(csp: str, name: str):
+    for part in csp.split(";"):
+        p = part.strip().lower()
+        if p.split(" ")[0] == name:
+            return p
+    return None
+
+
+def analyze_headers(headers, is_https: bool, set_cookies=None):
+    """headers: httpx.Headers or dict. Returns issues + passed checks for the final response."""
+    issues, passed = [], []
+    h = {k.lower(): v for k, v in dict(headers).items()}
+    set_cookies = set_cookies or []
+
+    # 1. X-XSS-Protection (legacy)
+    xss = h.get("x-xss-protection", "").strip()
+    if xss.startswith("1"):
+        issues.append(_issue("xss_protection", "Outdated X-XSS-Protection Header", "LOW",
+            "X-XSS-Protection: 1 enables the removed browser XSS auditor, which itself introduced XS-Search leaks in older browsers.",
+            "Set 'X-XSS-Protection: 0' and rely on a strong Content-Security-Policy instead."))
     else:
-        passed.append("No active X-XSS-Protection header (Standard modern behavior)")
+        passed.append("X-XSS-Protection not enabled (correct modern behaviour)")
 
-    # 2. Strict-Transport-Security (HSTS)
-    hsts = headers.get("strict-transport-security", "")
-    if hsts:
-        passed.append("Strict-Transport-Security (HSTS) is active")
-    else:
-        issues.append({
-            "id": "hsts_missing",
-            "title": "Missing Strict-Transport-Security (HSTS)",
-            "severity": "LOW",
-            "description": "The response is missing the HSTS header. Note: If this domain is on the browser's HSTS Preload list (like google.com), this is safe as the browser enforces HTTPS natively.",
-            "solution": "Add 'Strict-Transport-Security: max-age=31536000; includeSubDomains' to your server configuration."
-        })
-
-    # 3. Server Fingerprint
-    server = headers.get("server", "").strip()
-    x_powered_by = headers.get("x-powered-by", "").strip()
-    fingerprint = server or x_powered_by
-    if fingerprint:
-        if re.search(r'\d+\.\d+', fingerprint):
-            issues.append({
-                "id": "server_version_leak",
-                "title": "Server Version Leakage",
-                "severity": "HIGH",
-                "description": f"The server is leaking its exact version number: '{fingerprint}'. This allows attackers to easily look up known CVEs.",
-                "solution": "Configure your web server to hide version numbers in the 'Server' and 'X-Powered-By' headers."
-            })
-        elif fingerprint.lower() in ["apache", "nginx", "iis", "microsoft-iis", "gunicorn", "uvicorn", "tomcat", "express", "php"]:
-            issues.append({
-                "id": "server_fingerprint",
-                "title": "Exposed Server Fingerprint",
-                "severity": "LOW",
-                "description": f"The server is revealing its technology stack: '{fingerprint}'. While no exact version is leaked, it still gives attackers intelligence.",
-                "solution": "Change the Server header to a generic value or remove it entirely."
-            })
+    # 2. HSTS (only meaningful over HTTPS)
+    hsts = h.get("strict-transport-security", "")
+    if is_https:
+        if not hsts:
+            issues.append(_issue("hsts_missing", "Missing Strict-Transport-Security (HSTS)", "MEDIUM",
+                "Without HSTS, a user's first visit (or a typed http:// link) can be downgraded and intercepted on hostile networks.",
+                "Add 'Strict-Transport-Security: max-age=31536000; includeSubDomains'."))
         else:
-            passed.append(f"Server header is sanitized / protected ('{fingerprint}')")
-    else:
-        passed.append("Server fingerprint hidden / suppressed")
+            m = re.search(r"max-age\s*=\s*\"?(\d+)", hsts, re.I)
+            age = int(m.group(1)) if m else 0
+            if age < 15552000:  # 180 days
+                issues.append(_issue("hsts_short", "Weak HSTS max-age", "LOW",
+                    f"HSTS max-age is only {age} seconds ({age // 86400} days). Short lifetimes leave gaps for downgrade attacks.",
+                    "Use max-age of at least 31536000 (1 year)."))
+            else:
+                passed.append(f"HSTS enforced for {age // 86400} days" + (" incl. subdomains" if "includesubdomains" in hsts.lower() else ""))
 
-    # 4. Content-Security-Policy (CSP)
-    csp = headers.get("content-security-policy", "")
+    # 3. Server / framework fingerprint
+    for hdr in ("server", "x-powered-by", "x-aspnet-version", "x-aspnetmvc-version"):
+        val = h.get(hdr, "").strip()
+        if not val:
+            continue
+        if re.search(r"\d+\.\d+", val):
+            issues.append(_issue(f"{hdr}_version_leak", f"Version Disclosure in '{hdr}' Header", "MEDIUM",
+                f"The '{hdr}' header discloses an exact software version: '{val}'. Attackers use this to look up known CVEs.",
+                "Hide version numbers (e.g. nginx 'server_tokens off', Apache 'ServerTokens Prod', remove X-Powered-By)."))
+        elif hdr != "server" or val.lower() in ["apache", "nginx", "iis", "microsoft-iis", "gunicorn", "uvicorn", "tomcat", "express", "php", "openresty", "lighttpd", "jetty", "werkzeug"]:
+            issues.append(_issue(f"{hdr}_fingerprint", f"Technology Fingerprint in '{hdr}' Header", "LOW",
+                f"The '{hdr}' header reveals the technology stack: '{val}'.",
+                "Remove the header or replace it with a generic value."))
+    if not any(i["id"].endswith(("_version_leak",)) for i in issues):
+        passed.append("No software version numbers disclosed in headers")
+
+    # 4. Content-Security-Policy
+    csp = h.get("content-security-policy", "")
+    csp_ro = h.get("content-security-policy-report-only", "")
     if not csp:
-        issues.append({
-            "id": "csp_missing",
-            "title": "Missing Content-Security-Policy (CSP)",
-            "severity": "MEDIUM",
-            "description": "No CSP was found. While hard to implement on legacy sites without breaking features, it is the best defense against Cross-Site Scripting (XSS).",
-            "solution": "Implement a CSP starting with \"default-src 'self'\" and gradually allow required domains."
-        })
+        issues.append(_issue("csp_missing", "Missing Content-Security-Policy (CSP)", "MEDIUM",
+            "No enforced CSP was found" + (" (only a Report-Only policy, which blocks nothing)" if csp_ro else "") +
+            ". CSP is the strongest browser-side defence against Cross-Site Scripting (XSS).",
+            "Implement a CSP starting with \"default-src 'self'\" (or a nonce-based 'strict-dynamic' policy) and allow only required origins."))
     else:
-        # Check if script-src specifically allows unsafe-inline (styles are allowed in modern CSP3)
-        csp_parts = [p.strip().lower() for p in csp.split(";")]
-        script_parts = [p for p in csp_parts if p.startswith("script-src")]
-        default_parts = [p for p in csp_parts if p.startswith("default-src")]
-        
-        has_script_unsafe = False
-        if script_parts:
-            has_script_unsafe = "'unsafe-inline'" in script_parts[0] or "unsafe-inline" in script_parts[0]
-        elif default_parts:
-            has_script_unsafe = "'unsafe-inline'" in default_parts[0] or "unsafe-inline" in default_parts[0]
-        elif "style-src" not in csp and "unsafe-inline" in csp:
-            has_script_unsafe = True
+        script = _directive(csp, "script-src") or _directive(csp, "default-src") or ""
+        has_nonce_or_hash = bool(re.search(r"'(nonce-|sha256-|sha384-|sha512-)", script)) or "'strict-dynamic'" in script
+        csp_problems = []
+        if "'unsafe-inline'" in script and not has_nonce_or_hash:
+            issues.append(_issue("csp_unsafe_inline", "CSP Allows Inline Scripts ('unsafe-inline')", "HIGH",
+                "script-src allows 'unsafe-inline' without nonces/hashes, so injected inline scripts still execute — the CSP gives little XSS protection.",
+                "Remove 'unsafe-inline' from script-src; use nonces or hashes for necessary inline scripts."))
+            csp_problems.append(1)
+        if "'unsafe-eval'" in script:
+            issues.append(_issue("csp_unsafe_eval", "CSP Allows eval() ('unsafe-eval')", "MEDIUM",
+                "script-src allows 'unsafe-eval', letting attacker-controlled strings be executed as code.",
+                "Remove 'unsafe-eval' and refactor code that uses eval()/new Function()."))
+            csp_problems.append(1)
+        if re.search(r"(^|\s)(\*|https?:|data:)(\s|$)", script.replace("script-src", "").replace("default-src", "")):
+            issues.append(_issue("csp_wildcard", "CSP Allows Scripts From Any Origin", "MEDIUM",
+                "script-src contains a wildcard (*, https: or data:), allowing scripts from arbitrary hosts.",
+                "List explicit trusted origins or use a nonce-based 'strict-dynamic' policy."))
+            csp_problems.append(1)
+        if not script:
+            issues.append(_issue("csp_no_script", "CSP Does Not Restrict Scripts", "MEDIUM",
+                "The CSP has neither script-src nor default-src, so script loading is unrestricted.",
+                "Add a script-src or default-src directive."))
+            csp_problems.append(1)
+        if not csp_problems:
+            passed.append("Content-Security-Policy restricts script execution")
 
-        if has_script_unsafe:
-            issues.append({
-                "id": "csp_unsafe",
-                "title": "Weak Content-Security-Policy",
-                "severity": "HIGH",
-                "description": "The CSP allows 'unsafe-inline' scripts. This completely defeats the primary purpose of a CSP, as attackers can still inject malicious inline scripts.",
-                "solution": "Remove 'unsafe-inline' from the script-src directive. Move inline scripts to external JS files or use nonces/hashes."
-            })
-        else:
-            passed.append("Strong Content-Security-Policy is enforced (scripts protected)")
-
-    # 5. X-Frame-Options
-    x_frame = headers.get("x-frame-options", "")
-    if x_frame:
-        passed.append("X-Frame-Options is protecting against Clickjacking")
+    # 5. Clickjacking: X-Frame-Options OR CSP frame-ancestors
+    xfo = h.get("x-frame-options", "").strip().upper()
+    fa = _directive(csp, "frame-ancestors") if csp else None
+    if fa or xfo in ("DENY", "SAMEORIGIN"):
+        passed.append("Clickjacking protection active (" + ("CSP frame-ancestors" if fa else f"X-Frame-Options: {xfo}") + ")")
     else:
-        issues.append({
-            "id": "x_frame_missing",
-            "title": "Missing X-Frame-Options",
-            "severity": "LOW",
-            "description": "Without X-Frame-Options, attackers might be able to embed this site in an iframe to perform Clickjacking.",
-            "solution": "Add 'X-Frame-Options: DENY' or 'SAMEORIGIN'."
-        })
+        issues.append(_issue("clickjacking", "No Clickjacking Protection", "MEDIUM" if set_cookies else "LOW",
+            "Neither X-Frame-Options nor CSP frame-ancestors is set, so the site can be embedded in a hidden iframe on an attacker's page (clickjacking).",
+            "Add \"Content-Security-Policy: frame-ancestors 'self'\" (or 'X-Frame-Options: DENY')."))
 
-    # Calculate Grade
-    if any(i['severity'] == 'HIGH' for i in issues):
-        grade = 'D'
-    elif any(i['severity'] == 'MEDIUM' for i in issues):
-        grade = 'C'
-    elif issues:
-        grade = 'B'
+    # 6. X-Content-Type-Options
+    if h.get("x-content-type-options", "").strip().lower() == "nosniff":
+        passed.append("X-Content-Type-Options: nosniff (MIME sniffing blocked)")
     else:
-        grade = 'A'
+        issues.append(_issue("nosniff_missing", "Missing X-Content-Type-Options", "LOW",
+            "Browsers may MIME-sniff responses, which can turn uploaded files into executable scripts.",
+            "Add 'X-Content-Type-Options: nosniff'."))
 
-    return {
-        "grade": grade,
-        "passedChecks": passed if passed else ["Standard connection established"],
-        "issues": issues
-    }
+    # 7. Referrer-Policy
+    rp = h.get("referrer-policy", "").strip().lower()
+    if not rp:
+        issues.append(_issue("referrer_missing", "Missing Referrer-Policy", "LOW",
+            "Without a Referrer-Policy, full URLs (which may contain tokens or IDs) can leak to third-party sites in the Referer header on older browsers.",
+            "Add 'Referrer-Policy: strict-origin-when-cross-origin'."))
+    elif "unsafe-url" in rp:
+        issues.append(_issue("referrer_unsafe", "Unsafe Referrer-Policy", "MEDIUM",
+            "'unsafe-url' sends the full URL, including paths and query strings, to every site — even over HTTP.",
+            "Use 'strict-origin-when-cross-origin' or 'no-referrer'."))
+    else:
+        passed.append(f"Referrer-Policy set ({rp})")
+
+    # 8. Permissions-Policy
+    if h.get("permissions-policy") or h.get("feature-policy"):
+        passed.append("Permissions-Policy restricts browser features")
+    else:
+        issues.append(_issue("permissions_missing", "Missing Permissions-Policy", "INFO",
+            "No Permissions-Policy limits access to camera, microphone, geolocation etc. for embedded content.",
+            "Add e.g. 'Permissions-Policy: camera=(), microphone=(), geolocation=()'."))
+
+    # 9. CORS
+    acao = h.get("access-control-allow-origin", "").strip()
+    acac = h.get("access-control-allow-credentials", "").strip().lower()
+    if acao == "*" and acac == "true":
+        issues.append(_issue("cors_wildcard_creds", "Dangerous CORS Configuration", "HIGH",
+            "Access-Control-Allow-Origin is '*' together with Allow-Credentials: true — a misconfiguration that signals cross-origin data exposure.",
+            "Reflect only an allow-list of trusted origins and never combine credentials with '*'."))
+    elif acao == "*":
+        issues.append(_issue("cors_wildcard", "Wildcard CORS Policy", "LOW",
+            "Any website can read this page's responses via JavaScript. Fine for public assets, risky for pages with user data.",
+            "Restrict Access-Control-Allow-Origin to trusted origins if this page serves private data."))
+
+    # 10. Cookies
+    weak = []
+    for raw in set_cookies:
+        name = raw.split("=", 1)[0].strip()
+        attrs = raw.lower()
+        missing = []
+        if is_https and "; secure" not in attrs and not attrs.endswith(";secure") and ";secure;" not in attrs.replace(" ", ""):
+            missing.append("Secure")
+        is_session = bool(re.search(r"sess|auth|token|sid|jwt|login|remember|csrf|xsrf", name, re.I))
+        if is_session and "httponly" not in attrs and not re.search(r"csrf|xsrf", name, re.I):
+            missing.append("HttpOnly")  # only session/auth cookies need to be hidden from JavaScript
+        if "samesite" not in attrs:
+            missing.append("SameSite")
+        if missing:
+            weak.append((name, missing, is_session))
+    if weak:
+        sev = "MEDIUM" if any(s and ("Secure" in m or "HttpOnly" in m) for _, m, s in weak) else "LOW"
+        weak = [(n, m) for n, m, _ in weak]
+        detail = "; ".join(f"{n} (missing {', '.join(m)})" for n, m in weak[:5])
+        issues.append(_issue("cookie_flags", "Insecure Cookie Attributes", sev,
+            f"Cookies are set without recommended protections: {detail}. Missing HttpOnly lets XSS steal them; missing Secure sends them over HTTP; missing SameSite enables CSRF.",
+            "Set cookies with 'Secure; HttpOnly; SameSite=Lax' (or Strict)."))
+    elif set_cookies:
+        passed.append(f"All {len(set_cookies)} cookie(s) use Secure/HttpOnly/SameSite")
+
+    return issues, passed
+
+
+def compute_grade(issues):
+    score = 100 - sum(SEVERITY_PENALTY.get(i["severity"], 0) for i in issues)
+    score = max(score, 0)
+    if any(i["severity"] == "CRITICAL" for i in issues):
+        return "F", min(score, 39)
+    for g, cutoff in (("A", 90), ("B", 75), ("C", 60), ("D", 40)):
+        if score >= cutoff:
+            return g, score
+    return "F", score
+
+
+SCAN_UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"}
+
+
+async def _assert_public(host):
+    if not host:
+        raise HTTPException(status_code=400, detail="Please enter a valid website address, e.g. example.com")
+    resolves, public = await _resolve_public(host)
+    if not resolves:
+        raise HTTPException(status_code=400, detail=f"The domain '{host}' does not exist or has no DNS records.")
+    if not public:
+        raise HTTPException(status_code=400, detail="Scanning private, local or internal network addresses is not allowed.")
+
+
+async def _safe_get(url, verify=True, timeout=10.0, max_hops=6):
+    """GET that follows redirects manually, re-validating every hop against SSRF."""
+    async with httpx.AsyncClient(timeout=timeout, follow_redirects=False, verify=verify, headers=SCAN_UA) as client:
+        chain = []
+        for _ in range(max_hops):
+            await _assert_public(urlparse(url).hostname)
+            resp = await client.get(url)
+            chain.append(url)
+            if resp.is_redirect and resp.headers.get("location"):
+                url = urljoin(url, resp.headers["location"])
+                continue
+            return resp, chain
+        raise HTTPException(status_code=502, detail="Too many redirects.")
+
+
+def _tls_error(e: Exception):
+    s = str(e)
+    if "CERTIFICATE_VERIFY_FAILED" in s or "certificate verify failed" in s:
+        m = re.search(r"certificate verify failed: ([^(]+)", s)
+        return (m.group(1).strip() if m else "certificate could not be verified")
+    return None
+
 
 @app.get("/api/scan/headers")
 async def scan_headers(url: str):
-    if not url.startswith(("http://", "https://")):
-        url = "https://" + url
+    raw = url.strip()
+    if not raw:
+        raise HTTPException(status_code=400, detail="Please enter a website address.")
+    scheme_given = bool(re.match(r"^https?://", raw, re.I))
+    if re.match(r"^[a-z][a-z0-9+.-]*://", raw, re.I) and not scheme_given:
+        raise HTTPException(status_code=400, detail="Only http:// and https:// websites can be scanned.")
+    target = raw if scheme_given else "https://" + raw
+    parsed = urlparse(target)
+    host = (parsed.hostname or "").lower()
+    await _assert_public(host)
 
+    issues, passed = [], []
+    tls_problem = None
     try:
-        # User-Agent spoofing to bypass basic bot blocks
-        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
-        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True, verify=False) as client:
-            # 1. Primary Header Scan
-            response = await client.get(url, headers=headers)
-            
-            raw_headers = dict(response.headers)
-            analysis = analyze_headers(raw_headers)
-            
-            # 2. Active Sensitive File Probing
-            # We are firing off quick checks for critical file exposures
-            probe_issues = []
-            probe_passed = []
-            
-            probes = [
-                {"path": "/.env", "name": "Exposed .env File", "severity": "CRITICAL", "description": "An environment file was found exposed to the public internet. This often contains live database passwords, API keys, and secret tokens.", "solution": "Block access to hidden files (starting with a dot) in your web server configuration."},
-                {"path": "/.git/config", "name": "Exposed Git Repository", "severity": "CRITICAL", "description": "The .git folder is publicly accessible. Attackers can download your entire source code history and proprietary algorithms.", "solution": "Block access to the .git directory immediately."},
-                {"path": "/.well-known/security.txt", "name": "Security.txt Discovered", "severity": "INFO", "description": "This site has a standard security.txt file, indicating they have a mature security vulnerability disclosure process.", "solution": "No action needed."}
-            ]
-
-            # Parse base URL to strip off paths for probing
-            from urllib.parse import urlparse
-            parsed = urlparse(url)
-            base_url = f"{parsed.scheme}://{parsed.netloc}"
-
-            for probe in probes:
-                probe_url = base_url + probe["path"]
-                try:
-                    # Very short timeout so we don't hold up the UI
-                    probe_resp = await client.get(probe_url, headers=headers, timeout=4.0, follow_redirects=False)
-                    if probe_resp.status_code == 200:
-                        text = probe_resp.text.lower()
-                        
-                        # Soft-404 Detection: Real .env or .git files are raw text. If we see HTML tags, it's a generic error page masquerading as a 200 OK.
-                        is_html = "<html" in text or "<body" in text or "<!doctype html" in text
-                        
-                        # Verify content to prevent false positives from generic 200 OK error pages
-                        if probe["path"] == "/.env" and not is_html and ("=" in text and ("db" in text or "key" in text or "secret" in text)):
-                            probe_issues.append({"id": "env_exposed", "title": probe["name"], "severity": probe["severity"], "description": probe["description"], "solution": probe["solution"]})
-                        elif probe["path"] == "/.git/config" and not is_html and ("[core]" in text):
-                            probe_issues.append({"id": "git_exposed", "title": probe["name"], "severity": probe["severity"], "description": probe["description"], "solution": probe["solution"]})
-                        elif probe["path"] == "/.well-known/security.txt" and ("contact:" in text):
-                            probe_passed.append("Official Security.txt policy found")
-                except Exception:
-                    pass # Ignore timeouts on probes
-            
-            # Merge probe results into main analysis
-            all_issues = analysis["issues"] + probe_issues
-            all_passed = analysis["passedChecks"] + probe_passed
-
-            # Recalculate Grade if CRITICAL issues were found
-            grade = analysis["grade"]
-            if probe_issues:
-                grade = "F" # Instant fail if .env or .git is exposed!
-
-            return {
-                "url": url,
-                "status_code": response.status_code,
-                "grade": grade,
-                "passedChecks": all_passed,
-                "issues": all_issues
-            }
+        try:
+            response, chain = await _safe_get(target)
+        except httpx.TransportError as e:
+            tls_problem = _tls_error(e)
+            if tls_problem:
+                response, chain = await _safe_get(target, verify=False)
+            elif not scheme_given:
+                # bare domain without working HTTPS -> try plain HTTP
+                target = "http://" + raw
+                response, chain = await _safe_get(target)
+            else:
+                raise
+    except HTTPException:
+        raise
     except httpx.TimeoutException:
-        raise HTTPException(status_code=504, detail="Scan timed out. Target might be offline or blocking requests.")
+        raise HTTPException(status_code=504, detail="The website took too long to respond (timed out). It may be offline or blocking scanners.")
+    except (httpx.ConnectError, httpx.RemoteProtocolError):
+        raise HTTPException(status_code=502, detail="Could not connect to the website. It may be offline or refusing connections.")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to scan target: {str(e)}")
+        raise HTTPException(status_code=502, detail=f"Scan failed: {type(e).__name__}: {str(e)[:150]}")
+
+    final_url = str(response.url)
+    final = urlparse(final_url)
+    is_https = final.scheme == "https"
+    base_url = f"{final.scheme}://{final.netloc}"
+
+    # --- Transport security ---
+    if tls_problem:
+        issues.append(_issue("tls_invalid", "Invalid TLS/SSL Certificate", "CRITICAL",
+            f"The certificate failed validation ({tls_problem}). Browsers show a full-page security warning, and the connection can be intercepted.",
+            "Install a valid certificate from a trusted CA (e.g. free Let's Encrypt) that matches the domain and renew it before expiry."))
+    elif is_https:
+        passed.append("Valid TLS certificate (trusted CA, hostname matches)")
+    if not is_https:
+        https_ok = False
+        try:
+            await _safe_get(f"https://{final.netloc}", timeout=6.0)
+            https_ok = True
+        except Exception:
+            pass
+        if https_ok:
+            issues.append(_issue("no_https_redirect", "Site Served Over Plain HTTP", "HIGH",
+                "The page was delivered over unencrypted HTTP even though HTTPS is available. Everything users send can be read or modified in transit.",
+                "Redirect all HTTP traffic to HTTPS (301) and enable HSTS."))
+        else:
+            issues.append(_issue("no_https", "HTTPS Not Supported", "CRITICAL",
+                "The site does not offer HTTPS at all. All traffic, including passwords and cookies, travels in plain text.",
+                "Enable HTTPS with a free Let's Encrypt certificate and redirect HTTP to HTTPS."))
+    elif not tls_problem:
+        # does http:// upgrade to https://?
+        try:
+            http_resp, _ = await _safe_get(f"http://{final.hostname}", timeout=6.0)
+            if str(http_resp.url).startswith("https://"):
+                passed.append("HTTP automatically redirects to HTTPS")
+            else:
+                issues.append(_issue("http_no_redirect", "HTTP Does Not Redirect to HTTPS", "MEDIUM",
+                    "Visiting the http:// address serves content without upgrading to HTTPS.",
+                    "Add a permanent (301) redirect from HTTP to HTTPS."))
+        except Exception:
+            passed.append("Plain HTTP port closed (HTTPS only)")
+
+    # --- Headers & cookies ---
+    h_issues, h_passed = analyze_headers(response.headers, is_https, response.headers.get_list("set-cookie"))
+    issues += h_issues
+    passed += h_passed
+
+    # --- Sensitive file exposure probes (run concurrently on the validated host) ---
+    probes = [
+        ("/.env", lambda t: re.search(r"^[A-Z0-9_]+\s*=", t, re.M) and re.search(r"(DB_|PASSWORD|SECRET|API_KEY|TOKEN|DATABASE)", t, re.I),
+         _issue("env_exposed", "Exposed .env File", "CRITICAL", "The environment file is publicly downloadable and usually contains database passwords, API keys and secrets.", "Block access to dotfiles in the web server and rotate every secret in the file immediately.")),
+        ("/.git/config", lambda t: "[core]" in t,
+         _issue("git_exposed", "Exposed Git Repository", "CRITICAL", "The .git directory is public; attackers can reconstruct the full source code and commit history (often including secrets).", "Deny access to /.git in the web server config and remove it from the web root.")),
+        ("/.git/HEAD", lambda t: t.strip().startswith("ref: refs/"),
+         _issue("git_head_exposed", "Exposed Git Metadata", "CRITICAL", "/.git/HEAD is publicly readable, confirming an exposed repository.", "Deny access to /.git in the web server config.")),
+        ("/.DS_Store", lambda t: "Bud1" in t[:16],
+         _issue("ds_store", "Exposed .DS_Store File", "LOW", "macOS .DS_Store files list directory contents, revealing hidden file names.", "Delete .DS_Store files from the server and block them.")),
+        ("/server-status", lambda t: "apache server status" in t.lower(),
+         _issue("server_status", "Apache server-status Exposed", "MEDIUM", "The server-status page reveals live requests, client IPs and internal URLs.", "Restrict /server-status to localhost.")),
+        ("/phpinfo.php", lambda t: "phpinfo()" in t and "php version" in t.lower(),
+         _issue("phpinfo", "phpinfo() Page Exposed", "MEDIUM", "phpinfo reveals PHP version, modules, paths and environment variables.", "Delete phpinfo.php from production.")),
+        ("/wp-config.php.bak", lambda t: "DB_PASSWORD" in t,
+         _issue("wp_config_bak", "WordPress Config Backup Exposed", "CRITICAL", "A backup of wp-config.php is downloadable, exposing database credentials.", "Delete the backup and rotate database credentials.")),
+        ("/.well-known/security.txt", lambda t: "contact:" in t.lower(), None),
+    ]
+
+    async def run_probe(path, check, issue):
+        try:
+            async with httpx.AsyncClient(timeout=5.0, follow_redirects=False, verify=False, headers=SCAN_UA) as c:
+                r = await c.get(base_url + path)
+            if r.status_code != 200:
+                return None
+            text = r.text[:20000]
+            if "<html" in text.lower()[:2000] and issue is not None:
+                return None  # soft-404 page, not the real file
+            return (path, issue) if check(text) else None
+        except Exception:
+            return None
+
+    results = await asyncio.gather(*(run_probe(*p) for p in probes))
+    found_files = False
+    for res in results:
+        if not res:
+            continue
+        path, issue = res
+        if issue is None:
+            passed.append("security.txt vulnerability-disclosure policy published")
+        else:
+            issues.append(issue)
+            found_files = True
+    if not found_files:
+        passed.append("No exposed .env, .git, backup or debug files found")
+
+    order = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3, "INFO": 4}
+    issues.sort(key=lambda i: order.get(i["severity"], 5))
+    grade, score = compute_grade(issues)
+    return {
+        "url": final_url,
+        "requestedUrl": target,
+        "redirectChain": chain,
+        "status_code": response.status_code,
+        "grade": grade,
+        "score": score,
+        "https": is_https,
+        "passedChecks": passed or ["Connection established"],
+        "issues": issues,
+    }
+
 
 import random
 
@@ -856,10 +1027,10 @@ async def analyze_scam(req: ScamAnalysisRequest):
         age_txt = f" Domain age: {res['ageDays']} days." if res.get("ageDays") is not None else ""
         explanation = (f"URL audit for '{res['host']}' (registered domain: {res.get('reg', '')}). Checked live phishing feeds, "
                        f"brand impersonation & typosquatting, domain age (RDAP), TLS certificate, redirects and the live page's forms/content.{age_txt}")
-        feed_hit, trusted = res["feedHit"], res["trusted"]
+        feed_hit = res["feedHit"]
     else:
         scam_prob, red_flags, tactics = analyze_text_heuristics(input_text)
-        feed_hit, trusted = False, False
+        feed_hit = False
         explanation = "Message analysed with scam-language heuristics and the ML text classifier."
         # Analyse any links inside the message
         text_score = scam_prob

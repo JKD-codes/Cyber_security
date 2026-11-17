@@ -6827,7 +6827,7 @@ function SiteScannerModule({ windowWidth, setRiskScore, setTriggerLaser }) {
 
             {scanResult.issues.map((issue, idx) => (
 
-              <div key={idx} className="glass-card" style={{ padding: '24px', borderLeft: `4px solid ${issue.severity === 'HIGH' ? 'var(--aura-danger)' : (issue.severity === 'LOW' ? 'var(--aura-info)' : 'var(--aura-watch)')}` }}>
+              <div key={idx} className="glass-card" style={{ padding: '24px', borderLeft: `4px solid ${['HIGH', 'CRITICAL'].includes(issue.severity) ? 'var(--aura-danger)' : (['LOW', 'INFO'].includes(issue.severity) ? 'var(--aura-info)' : 'var(--aura-watch)')}` }}>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
 
@@ -6841,11 +6841,11 @@ function SiteScannerModule({ windowWidth, setRiskScore, setTriggerLaser }) {
 
                     borderRadius: '4px',
 
-                    background: issue.severity === 'HIGH' ? 'rgba(239, 68, 68, 0.1)' : (issue.severity === 'LOW' ? 'rgba(59, 130, 246, 0.1)' : 'rgba(245, 158, 11, 0.1)'),
+                    background: ['HIGH', 'CRITICAL'].includes(issue.severity) ? 'rgba(239, 68, 68, 0.1)' : (['LOW', 'INFO'].includes(issue.severity) ? 'rgba(59, 130, 246, 0.1)' : 'rgba(245, 158, 11, 0.1)'),
 
-                    color: issue.severity === 'HIGH' ? 'var(--aura-danger)' : (issue.severity === 'LOW' ? 'var(--aura-info)' : 'var(--aura-watch)'),
+                    color: ['HIGH', 'CRITICAL'].includes(issue.severity) ? 'var(--aura-danger)' : (['LOW', 'INFO'].includes(issue.severity) ? 'var(--aura-info)' : 'var(--aura-watch)'),
 
-                    border: `1px solid ${issue.severity === 'HIGH' ? 'rgba(239, 68, 68, 0.3)' : (issue.severity === 'LOW' ? 'rgba(59, 130, 246, 0.3)' : 'rgba(245, 158, 11, 0.3)')}`
+                    border: `1px solid ${['HIGH', 'CRITICAL'].includes(issue.severity) ? 'rgba(239, 68, 68, 0.3)' : (['LOW', 'INFO'].includes(issue.severity) ? 'rgba(59, 130, 246, 0.3)' : 'rgba(245, 158, 11, 0.3)')}`
 
                   }}>
 
